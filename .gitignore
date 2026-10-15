@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Modelo de voz offline (baixar à parte: alphacephei.com/vosk/models)
+ia/vosk-model-*/
+
+# Gerados pelo script do Fusion
+fusion/RoboDoisBracos/saida/
+
+# Pacote para o técnico (dá para recriar a partir de laser/)
+laser/*.zip

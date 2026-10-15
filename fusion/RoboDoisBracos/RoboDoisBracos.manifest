@@ -1,0 +1,10 @@
+{
+  "autodeskProduct": "Fusion",
+  "type": "script",
+  "author": "",
+  "description": {
+    "": "Gera o robô de dois braços (MDF 3 mm, corte a laser): modelo, juntas, DXFs e lista de peças"
+  },
+  "supportedOS": "windows|mac",
+  "editEnabled": true
+}

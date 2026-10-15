@@ -1,0 +1,364 @@
+<meta charset="utf-8">
+<title>Robô TARS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600&family=Barlow:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: oficina — viewport 3D ocupa a tela, painel de controle à direita (embaixo no celular) */
+:root {
+  --bg: #eceeea; --panel: #f7f8f5; --ink: #1f2421; --muted: #5c6661; --line: #d2d7d2;
+  --accent: #a8521f; --ok: #2d7a4c; --bad: #b3261e; --scene: #e3e6e1; --grid: #c8cdc7;
+  --display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141816; --panel: #1b201d; --ink: #e4e9e5; --muted: #98a39c; --line: #2d3430;
+  --accent: #e08a52; --ok: #62bd85; --bad: #f2867e; --scene: #181c1a; --grid: #2a312d; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #141816; --panel: #1b201d; --ink: #e4e9e5; --muted: #98a39c; --line: #2d3430;
+  --accent: #e08a52; --ok: #62bd85; --bad: #f2867e; --scene: #181c1a; --grid: #2a312d; color-scheme: dark }
+
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
+.app { display: grid; grid-template-columns: minmax(0, 1fr) 340px; height: 100%; }
+.vista { position: relative; min-width: 0; background: var(--scene); }
+.vista canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.dica { position: absolute; left: 16px; bottom: 12px; font: 12px var(--mono); color: var(--muted); pointer-events: none; }
+.painel { background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto;
+  padding-block: 20px 28px; padding-inline: 20px; display: flex; flex-direction: column; gap: 22px; }
+h1 { font: 600 26px/1.1 var(--display); letter-spacing: .01em; margin: 0; text-wrap: balance; }
+.sub { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+h2 { font: 600 12px var(--display); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 0 0 10px; }
+section { display: flex; flex-direction: column; }
+.junta { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; margin-bottom: 8px; }
+.junta label { font-size: 14px; }
+.junta output { font: 500 13px var(--mono); font-variant-numeric: tabular-nums; color: var(--accent); }
+.junta input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+.botoes { display: flex; flex-wrap: wrap; gap: 6px; }
+button, select { font: 500 13px var(--body); color: var(--ink); background: transparent; border: 1px solid var(--line);
+  border-radius: 6px; padding: 6px 11px; cursor: pointer; }
+button:hover, select:hover { border-color: var(--accent); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.principal { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.linha { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; font-size: 14px; }
+.linha input[type="range"] { flex: 1; max-width: 150px; accent-color: var(--accent); }
+.ficha { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; margin: 0; }
+.ficha div { min-width: 0; }
+.ficha dt { font-size: 12px; color: var(--muted); }
+.ficha dd { margin: 0; font: 500 16px var(--mono); font-variant-numeric: tabular-nums; }
+.verif { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; font-size: 13px; }
+.verif li { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: baseline; }
+.chip { font: 500 10px var(--mono); padding: 1px 6px; border-radius: 4px; border: 1px solid currentColor; }
+.chip.ok { color: var(--ok); } .chip.bad { color: var(--bad); }
+.legenda { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
+.legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.legenda i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: 62vh auto; height: auto; }
+  .painel { border-left: 0; border-top: 1px solid var(--line); overflow: visible; }
+}
+</style>
+
+<div class="app">
+  <div class="vista" id="vista">
+    <canvas id="tela" aria-label="Modelo 3D do robô TARS"></canvas>
+    <div class="dica">arrastar: girar · roda: zoom · botão direito: mover</div>
+  </div>
+  <aside class="painel">
+    <header>
+      <h1>Robô TARS</h1>
+      <p class="sub">4 blocos de MDF 3 mm cortados a laser · 2 braços com micro servo SG90 · tela OLED · geometria lida de projeto.py</p>
+    </header>
+
+    <section>
+      <h2>Braços</h2>
+      <div id="juntas"></div>
+    </section>
+
+    <section>
+      <h2>Poses</h2>
+      <div class="botoes" id="poses"></div>
+      <div class="botoes" style="margin-top:8px">
+        <button id="demo" class="principal" type="button">▶ Demonstração</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Vista</h2>
+      <div class="linha"><label for="acabamento">Acabamento</label>
+        <select id="acabamento"><option value="mdf">MDF natural</option><option value="tars">Pintado (TARS)</option></select></div>
+      <div class="linha"><label for="explodir">Vista explodida</label><input id="explodir" type="range" min="0" max="1" step="0.01" value="0"></div>
+      <div class="linha"><label for="transp">Ver por dentro</label><input id="transp" type="checkbox"></div>
+      <div class="botoes"><button id="camera" type="button">Recentrar câmera</button></div>
+      <div class="legenda" style="margin-top:12px">
+        <span><i style="background:#c9a77c"></i>MDF</span>
+        <span><i style="background:#3a6fd8"></i>SG90</span>
+        <span><i style="background:#11808a"></i>Arduino Uno</span>
+        <span><i style="background:#2f3f8f"></i>PCA9685</span>
+        <span><i style="background:#0d0f12"></i>OLED</span>
+      </div>
+    </section>
+
+    <section>
+      <h2>Ficha</h2>
+      <dl class="ficha" id="ficha"></dl>
+    </section>
+
+    <section>
+      <h2>Verificações de projeto</h2>
+      <ul class="verif" id="verif"></ul>
+    </section>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const D = /*DADOS*/null;
+const $ = id => document.getElementById(id);
+const cor = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const V = a => new THREE.Vector3(a[0], a[1], a[2]);
+const cruz = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+const quadro = ([o, ex, ez]) => new THREE.Matrix4().makeBasis(V(ex), V(cruz(ez, ex)), V(ez)).setPosition(V(o));
+
+// ── cena ────────────────────────────────────────────────────────────────
+const tela = $('tela'), vista = $('vista');
+const renderer = new THREE.WebGLRenderer({ canvas: tela, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const cena = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, 1, 5, 6000);
+camera.up.set(0, 0, 1);
+const controles = new THREE.OrbitControls(camera, tela);
+controles.enableDamping = true;
+function recentrar() { camera.position.set(430, -640, 360); controles.target.set(0, 0, 145); controles.update(); }
+recentrar();
+
+cena.add(new THREE.HemisphereLight(0xffffff, 0x8c8474, 0.8));
+const sol = new THREE.DirectionalLight(0xffffff, 0.75);
+sol.position.set(350, -450, 800); sol.castShadow = true;
+Object.assign(sol.shadow.camera, { left: -400, right: 400, top: 400, bottom: -400, near: 100, far: 2000 });
+sol.shadow.mapSize.set(2048, 2048); sol.shadow.bias = -0.0005;
+cena.add(sol);
+const chao = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.ShadowMaterial({ opacity: 0.16 }));
+chao.position.z = -D.T - 0.05; chao.receiveShadow = true; cena.add(chao);
+let grade;
+function aplicarTema() {
+  cena.background = new THREE.Color(cor('--scene'));
+  if (grade) cena.remove(grade);
+  grade = new THREE.GridHelper(1000, 50, cor('--grid'), cor('--grid'));   // 20 mm por quadro
+  grade.rotation.x = Math.PI / 2; grade.position.z = -D.T - 0.1; cena.add(grade);
+}
+aplicarTema();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', aplicarTema);
+new MutationObserver(aplicarTema).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+// ── materiais ───────────────────────────────────────────────────────────
+const mat = {
+  tronco: new THREE.MeshStandardMaterial({ color: 0xc9a77c, roughness: 0.85 }),
+  braco: new THREE.MeshStandardMaterial({ color: 0xd0ae86, roughness: 0.85 }),
+  aresta: new THREE.LineBasicMaterial({ color: 0x5e3d22, transparent: true, opacity: 0.6 }),
+  vinco: new THREE.LineBasicMaterial({ color: 0x4a2f1a }),
+  'Servo SG90': new THREE.MeshStandardMaterial({ color: 0x3a6fd8, roughness: 0.35 }),
+  'Horn SG90': new THREE.MeshStandardMaterial({ color: 0xf0efe9, roughness: 0.6 }),
+  'Arduino Uno': new THREE.MeshStandardMaterial({ color: 0x11808a, roughness: 0.6 }),
+  'PCA9685': new THREE.MeshStandardMaterial({ color: 0x2f3f8f, roughness: 0.6 }),
+  'OLED SSD1306': new THREE.MeshStandardMaterial({ color: 0x0d0f12, roughness: 0.4 }),
+};
+const ACABAMENTOS = {
+  mdf: { tronco: 0xc9a77c, braco: 0xd0ae86, aresta: 0x5e3d22, vinco: 0x4a2f1a, metal: 0, rough: 0.85 },
+  tars: { tronco: 0x6b6f75, braco: 0x74787e, aresta: 0x2b2d31, vinco: 0x1c1d20, metal: 0.55, rough: 0.42 },
+};
+$('acabamento').addEventListener('change', e => {
+  const a = ACABAMENTOS[e.target.value];
+  for (const k of ['tronco', 'braco']) Object.assign(mat[k], { metalness: a.metal, roughness: a.rough }).color.setHex(a[k]);
+  mat.aresta.color.setHex(a.aresta); mat.vinco.color.setHex(a.vinco);
+});
+
+// ── articulação: um pivô por braço, no eixo dos ombros (paralelo a X) ────
+const [Ys, Zs] = D.ombro;
+const pivos = {};
+for (const l of ['D', 'E']) { pivos[l] = new THREE.Group(); pivos[l].position.set(0, Ys, Zs); cena.add(pivos[l]); }
+function pendurar(obj, grupo, lado) {
+  // obj está na posição do mundo (braços em pé); os do braço passam a ser filhos do pivô
+  if (grupo === 'braco') { obj.position.sub(new THREE.Vector3(0, Ys, Zs)); pivos[lado].add(obj); }
+  else cena.add(obj);
+}
+
+// vista explodida (mm): X para fora do lado da peça, Y para fora da face da peça
+const EXPLODE = {
+  'Corpo frente': [0, 60, 0], 'Corpo trás (tampa)': [0, 60, 0], 'Corpo topo': [0, 0, 80],
+  'Corpo lateral': [25, 0, 0], 'Reforço do corpo': [15, 25, 0], 'Servo SG90': [10, 0, 0],
+  'Mancal disco de encosto': [40, 0, 0], 'Mancal disco do eixo': [55, 0, 0],
+  'Horn SG90': [90, 0, 0], 'Braço lateral interna': [70, 0, 0], 'Anteparo do horn': [100, 0, 0],
+  'Braço frente/trás': [110, 30, 0], 'Braço topo/fundo': [110, 0, 0], 'Reforço do braço': [110, 15, 0],
+  'Braço lateral externa (tampa)': [150, 0, 0], 'Arduino Uno': [0, 0, 35], 'PCA9685': [-15, 0, 0],
+  'OLED SSD1306': [0, 30, 0],
+};
+const pecas3d = [];
+function registrar(obj, nome, inst) {
+  const e = EXPLODE[nome] || [0, 0, 0];
+  const sx = Math.sign(inst[0][0]) || 1, sy = Math.sign(inst[0][1]) || 1;
+  obj.userData.base = obj.position.clone();
+  obj.userData.exp = new THREE.Vector3(e[0] * sx, e[1] * sy, e[2]);
+  obj.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  pecas3d.push(obj);
+}
+const lado = inst => inst[0][0] > 0 ? 'D' : 'E';
+
+// chapas de MDF: contorno + furos extrudados na espessura; arestas do corte e vincos gravados
+for (const p of D.pecas) {
+  const forma = new THREE.Shape(p.contorno.map(([x, y]) => new THREE.Vector2(x, y)));
+  forma.holes = p.furos.map(f => new THREE.Path(f.map(([x, y]) => new THREE.Vector2(x, y))));
+  const geo = new THREE.ExtrudeGeometry(forma, { depth: D.T, bevelEnabled: false, curveSegments: 1 });
+  const arestas = new THREE.EdgesGeometry(geo, 25);
+  let vincos = null;
+  if (p.vincos.length) {
+    const v = [];
+    for (const [[x1, y1], [x2, y2]] of p.vincos) for (const z of [-0.05, D.T + 0.05]) v.push(x1, y1, z, x2, y2, z);
+    vincos = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+  }
+  for (const inst of p.inst) {
+    const obj = new THREE.Group();
+    obj.add(new THREE.Mesh(geo, p.grupo === 'tronco' ? mat.tronco : mat.braco));
+    obj.add(new THREE.LineSegments(arestas, mat.aresta));
+    if (vincos) obj.add(new THREE.LineSegments(vincos, mat.vinco));
+    obj.applyMatrix4(quadro(inst));
+    pendurar(obj, p.grupo, lado(inst));
+    registrar(obj, p.nome, inst);
+  }
+}
+
+// tela do OLED: textura desenhada num canvas
+function texturaOled() {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 128;
+  const g = c.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0, 0, 256, 128);
+  g.fillStyle = '#dff6ff'; g.font = 'bold 40px monospace'; g.fillText('TARS', 10, 44);
+  g.font = '20px monospace'; g.fillText('HUMOR       75%', 10, 82); g.fillText('HONESTIDADE 90%', 10, 110);
+  return new THREE.CanvasTexture(c);
+}
+
+// peças compradas: sólidos aproximados (caixas e cilindros ao longo do z local)
+for (const c of D.comprados) {
+  for (const inst of c.inst) {
+    const obj = new THREE.Group();
+    for (const s of c.solidos) {
+      let m;
+      if (s[0] === 'caixa') {
+        m = new THREE.Mesh(new THREE.BoxGeometry(...s[2]), mat[c.nome]);
+        m.position.set(...s[1]);
+      } else {
+        const [a, b, r] = [s[1], s[2], s[3]];
+        m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, Math.abs(b[2] - a[2]), 32), mat[c.nome]);
+        m.rotation.x = Math.PI / 2;
+        m.position.set(a[0], a[1], (a[2] + b[2]) / 2);
+      }
+      obj.add(m);
+    }
+    if (c.nome === 'OLED SSD1306') {   // a tela fica atrás da janela da frente, virada para fora
+      const t = new THREE.Mesh(new THREE.PlaneGeometry(...D.janela_oled), new THREE.MeshBasicMaterial({ map: texturaOled() }));
+      t.rotation.x = Math.PI; t.position.z = -0.05; obj.add(t);
+    }
+    obj.applyMatrix4(quadro(inst));
+    pendurar(obj, c.grupo, lado(inst));
+    registrar(obj, c.nome, inst);
+  }
+}
+
+// ── braços e poses ──────────────────────────────────────────────────────
+const JUNTAS = [{ nome: 'Braço D', lado: 'D' }, { nome: 'Braço E', lado: 'E' }];
+const [LMIN, LMAX] = D.limites;
+let atual = [0, 0];
+const sliders = JUNTAS.map((j, i) => {
+  const id = 'junta' + i;
+  const div = document.createElement('div');
+  div.className = 'junta';
+  div.innerHTML = `<label for="${id}">${j.nome}</label><output id="${id}v"></output>
+    <input id="${id}" type="range" min="${LMIN}" max="${LMAX}" step="1">`;
+  $('juntas').append(div);
+  const inp = div.querySelector('input');
+  inp.addEventListener('input', () => { pararDemo(); atual[i] = +inp.value; aplicar(); });
+  return inp;
+});
+function aplicar() {
+  JUNTAS.forEach((j, i) => {
+    atual[i] = Math.min(LMAX, Math.max(LMIN, atual[i]));
+    pivos[j.lado].rotation.x = -THREE.MathUtils.degToRad(atual[i]);   // positivo = para a frente
+    sliders[i].value = Math.round(atual[i]);
+    $('junta' + i + 'v').value = Math.round(atual[i]) + '°';
+  });
+}
+aplicar();
+
+// mesma suavização (smoothstep) do sketch do Arduino; poses = {braçoD, braçoE}
+const POSES = {
+  'Monolito': [0, 0], 'Passada': [35, -35], 'À frente': [90, 90], 'Para trás': [-60, -60],
+  'Aceno': [85, 0], 'Pronto': [20, 20],
+};
+const COREOGRAFIA = [
+  ['Monolito', 800], ['Passada', 700], [[-35, 35], 700], ['Passada', 700], [[-35, 35], 700],
+  ['Monolito', 600], ['À frente', 1000], [[90, 60], 300], ['À frente', 300], ['Aceno', 700],
+  [[85, 20], 300], ['Aceno', 300], ['Para trás', 1100], ['Monolito', 1000],
+];
+let anim = null, demoAtiva = false, passo = 0;
+function irPara(alvo, ms, fim) {
+  anim = { de: atual.slice(), para: typeof alvo === 'string' ? POSES[alvo] : alvo, ms, t0: performance.now(), fim };
+}
+for (const nome of Object.keys(POSES)) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.textContent = nome;
+  b.addEventListener('click', () => { pararDemo(); irPara(nome, 900); });
+  $('poses').append(b);
+}
+function proximoPasso() {
+  if (!demoAtiva) return;
+  const [pose, ms] = COREOGRAFIA[passo++ % COREOGRAFIA.length];
+  irPara(pose, ms, proximoPasso);
+}
+function pararDemo() { demoAtiva = false; $('demo').textContent = '▶ Demonstração'; }
+$('demo').addEventListener('click', () => {
+  if (demoAtiva) { pararDemo(); return; }
+  demoAtiva = true; passo = 0; $('demo').textContent = '❚❚ Pausar'; proximoPasso();
+});
+
+// ── vista ───────────────────────────────────────────────────────────────
+function explodir() {
+  const e = +$('explodir').value;
+  for (const o of pecas3d) o.position.copy(o.userData.base).addScaledVector(o.userData.exp, e);
+}
+$('explodir').addEventListener('input', explodir);
+$('transp').addEventListener('change', e => {
+  for (const m of [mat.tronco, mat.braco]) {
+    m.transparent = e.target.checked; m.opacity = e.target.checked ? 0.2 : 1; m.depthWrite = !e.target.checked;
+  }
+});
+$('camera').addEventListener('click', recentrar);
+
+// ── ficha e verificações (calculadas por projeto.py) ────────────────────
+const R = D.resumo;
+$('ficha').innerHTML = [
+  ['Altura', R.altura + ' mm'], ['Largura', R.largura + ' mm'], ['Profundidade', R.profundidade + ' mm'],
+  ['Massa estimada', R.massa + ' g'], ['Servos', '2 × SG90'], ['Folga de torque', R.fs + '×'],
+].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+$('verif').innerHTML = D.verificacoes.map(([ok, t]) =>
+  `<li><span class="chip ${ok ? 'ok' : 'bad'}">${ok ? 'OK' : 'FALHA'}</span><span>${t}</span></li>`).join('');
+
+// ── laço ────────────────────────────────────────────────────────────────
+new ResizeObserver(() => {
+  const w = vista.clientWidth, h = vista.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+}).observe(vista);
+renderer.setAnimationLoop(agora => {
+  if (anim) {
+    const s = anim.ms > 0 ? Math.min(1, (agora - anim.t0) / anim.ms) : 1;
+    const k = s * s * (3 - 2 * s);
+    atual = anim.de.map((a, i) => a + (anim.para[i] - a) * k);
+    aplicar();
+    if (s >= 1) { const f = anim.fim; anim = null; if (f) f(); }
+  }
+  controles.update();
+  renderer.render(cena, camera);
+});
+</script>

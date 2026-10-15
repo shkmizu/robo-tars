@@ -1,0 +1,27 @@
+ROBÔ TARS — ARQUIVOS PARA CORTE A LASER
+=======================================
+
+Material ......: MDF 3 mm (o projeto usa 3,0 mm; se a chapa medir diferente, avise)
+Chapa .........: 900 × 600 mm
+Unidade .......: milímetros, escala 1:1 (não redimensionar)
+
+ARQUIVOS
+  00_pente_de_teste.dxf  -> cortar PRIMEIRO, num retalho (144 × 35 mm)
+  chapa_1.dxf            -> todas as 37 peças do robô
+  chapa_1.svg            -> só prévia com os nomes das peças (NÃO mandar ao laser)
+
+CAMADAS / CORES (chapa_1.dxf)
+  CORTE    (vermelho) -> corte passante
+  GRAVACAO (azul)     -> só 3 linhas retas (vinco decorativo): gravação de linha
+                         com potência baixa, sem atravessar. Pode ignorar se preferir.
+
+ORDEM SUGERIDA
+  1. Gravação (azul) primeiro, depois corte (vermelho)
+  2. Furos internos antes do contorno de cada peça ("cut inner shapes first")
+
+KERF (largura do feixe)
+  As peças foram desenhadas compensando um kerf de 0,15 mm nos encaixes.
+  Se o kerf da sua máquina for diferente, me avise que gero de novo.
+  O pente de teste tem 11 rasgos de 2,70 a 3,20 mm (passo 0,05; o furo marca o
+  mais estreito). O rasgo em que um pedaço do mesmo MDF entra justo indica o
+  ajuste certo: kerf = 3,0 − largura desse rasgo.

@@ -1,0 +1,159 @@
+<meta charset="utf-8">
+<title>Chapa de Corte do TARS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600&family=Barlow:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: mesa de corte — a chapa ocupa a área principal, ficha da peça e lista ao lado (embaixo no celular) */
+:root {
+  --bg: #eceeea; --panel: #f7f8f5; --ink: #1f2421; --muted: #5c6661; --line: #d2d7d2;
+  --chapa: #e6d3b4; --peca: #d4b386; --corte: #c0331f; --grav: #2160b0; --sel: #f0a35e; --accent: #a8521f;
+  --display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141816; --panel: #1b201d; --ink: #e4e9e5; --muted: #98a39c; --line: #2d3430;
+  --chapa: #3a3226; --peca: #7c6545; --corte: #ff6d57; --grav: #6aa6ff; --sel: #e8925a; --accent: #e08a52; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #141816; --panel: #1b201d; --ink: #e4e9e5; --muted: #98a39c; --line: #2d3430;
+  --chapa: #3a3226; --peca: #7c6545; --corte: #ff6d57; --grav: #6aa6ff; --sel: #e8925a; --accent: #e08a52; color-scheme: dark }
+
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
+.pagina { max-width: 1320px; margin: 0 auto; padding-inline: 20px; padding-block: 22px 32px; display: flex; flex-direction: column; gap: 18px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+h1 { font: 600 30px/1.05 var(--display); margin: 0; letter-spacing: .01em; text-wrap: balance; }
+.sub { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.numeros { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0; }
+.numeros div { min-width: 0; }
+.numeros dt { font-size: 12px; color: var(--muted); }
+.numeros dd { margin: 0; font: 500 18px var(--mono); font-variant-numeric: tabular-nums; }
+.grade { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; align-items: start; }
+.mesa { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
+.mesa svg { display: block; width: 100%; height: auto; }
+.legenda { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); padding: 8px 4px 0; }
+.legenda span { display: inline-flex; align-items: center; gap: 7px; }
+.legenda i { display: inline-block; width: 18px; height: 0; border-top: 2px solid; }
+.legenda b { display: inline-block; width: 12px; height: 12px; border-radius: 2px; background: var(--peca); border: 1px solid var(--corte); }
+.chapa { fill: var(--chapa); stroke: var(--muted); stroke-width: .6; }
+.regua line { stroke: var(--muted); stroke-width: .5; }
+.regua text { fill: var(--muted); font: 9px var(--mono); }
+.p path { fill: var(--peca); fill-rule: evenodd; stroke: var(--corte); stroke-width: .7; transition: fill .15s, opacity .15s; }
+.p .gv { stroke: var(--grav); stroke-width: 1.4; }
+.p text { fill: var(--ink); font-family: var(--mono); font-weight: 500; text-anchor: middle; pointer-events: none; }
+.p { cursor: pointer; outline: none; }
+svg.foco .p { opacity: .35; }
+svg.foco .p.on { opacity: 1; }
+.p.on path { fill: var(--sel); }
+.lado { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.ficha { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.ficha .topo { display: flex; align-items: center; gap: 10px; }
+.num { font: 600 13px var(--mono); min-width: 26px; height: 26px; display: inline-grid; place-items: center; border-radius: 6px; background: var(--sel); color: var(--ink); }
+.ficha h2 { font: 600 20px/1.15 var(--display); margin: 0; }
+.ficha .grupo { font: 600 11px var(--display); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+.ficha p { margin: 0; }
+.ficha dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 4px 0 0; font-size: 14px; }
+.ficha dt { color: var(--muted); }
+.ficha dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.lista button { width: 100%; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 8px; align-items: center; text-align: left;
+  font: 14px var(--body); color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 5px 8px; cursor: pointer; }
+.lista button:hover { border-color: var(--line); }
+.lista button[aria-pressed="true"] { border-color: var(--accent); background: var(--panel); }
+.lista button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.lista .n { font: 500 12px var(--mono); color: var(--muted); }
+.lista .q { font: 500 12px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+h3 { font: 600 12px var(--display); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 0 0 6px; }
+.nota { font-size: 13px; color: var(--muted); margin: 0; max-width: 75ch; }
+@media (max-width: 900px) { .grade { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .p path { transition: none; } }
+</style>
+
+<div class="pagina">
+  <header>
+    <div>
+      <h1>Chapa de Corte do TARS</h1>
+      <p class="sub" id="sub"></p>
+    </div>
+    <dl class="numeros" id="numeros"></dl>
+  </header>
+
+  <div class="grade">
+    <div class="mesa">
+      <svg id="svg" role="img" aria-label="Distribuição das peças na chapa de MDF"></svg>
+      <div class="legenda">
+        <span><i style="border-color:var(--corte)"></i>corte passante (camada CORTE)</span>
+        <span><i style="border-color:var(--grav)"></i>vinco gravado (camada GRAVACAO)</span>
+        <span><b></b>peça · o número indica o tipo</span>
+      </div>
+    </div>
+
+    <aside class="lado">
+      <section class="ficha" aria-live="polite">
+        <div class="topo"><span class="num" id="f-num"></span><div><div class="grupo" id="f-grupo"></div><h2 id="f-nome"></h2></div></div>
+        <p id="f-desc"></p>
+        <dl>
+          <dt>Quantidade</dt><dd id="f-qtd"></dd>
+          <dt>Tamanho</dt><dd id="f-tam"></dd>
+          <dt>Fixação</dt><dd id="f-fix" style="font-family:var(--body)"></dd>
+        </dl>
+      </section>
+      <section>
+        <h3>Peças na chapa</h3>
+        <ul class="lista" id="lista"></ul>
+      </section>
+    </aside>
+  </div>
+
+  <p class="nota">Mesma distribuição do arquivo <b>chapa_1.dxf</b> que vai para o laser: medidas em milímetros, escala 1:1,
+    origem no canto inferior esquerdo. Passe o mouse ou toque numa peça para ver o que é e onde ela vai no robô.</p>
+</div>
+
+<script>
+const TIPOS = /*TIPOS*/null;
+const R = /*RESUMO*/null;
+const $ = id => document.getElementById(id);
+const br = (v, d = 0) => v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+$('sub').textContent = `MDF ${br(R.T, 1)} mm · chapa ${R.larg} × ${R.alt} mm · kerf compensado ${br(R.kerf, 2)} mm`;
+$('numeros').innerHTML = [
+  ['Peças', R.pecas], ['Tipos', R.tipos], ['Uso da chapa', R.uso + '%'],
+  ['Corte', br(R.corte, 1) + ' m'], ['Gravação', br(R.grav, 2) + ' m'],
+].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+
+// chapa com régua em mm (marca a cada 50, número a cada 100)
+const M = 26, W = R.larg, H = R.alt;
+let regua = '';
+for (let x = 0; x <= W; x += 50) regua += `<line x1="${x}" y1="${-M + 14}" x2="${x}" y2="${x % 100 ? -4 : -8}"/>` +
+  (x % 100 ? '' : `<text x="${x}" y="${-M + 10}" text-anchor="middle">${x}</text>`);
+for (let y = 0; y <= H; y += 50) regua += `<line x1="${-M + 14}" y1="${H - y}" x2="${y % 100 ? -4 : -8}" y2="${H - y}"/>` +
+  (y % 100 ? '' : `<text x="${-M + 12}" y="${H - y + 3}" text-anchor="end">${y}</text>`);
+const svg = $('svg');
+svg.setAttribute('viewBox', `${-M - 6} ${-M} ${W + M + 12} ${H + M + 6}`);
+svg.innerHTML = `<g class="regua">${regua}</g><rect class="chapa" width="${W}" height="${H}"/>` + `/*SVG*/`;
+
+$('lista').innerHTML = TIPOS.map((t, k) =>
+  `<li><button type="button" data-k="${k}" aria-pressed="false"><span class="n">${k + 1}</span>` +
+  `<span>${t.nome}</span><span class="q">×${t.qtd}</span></button></li>`).join('');
+
+let atual = -1;
+function selecionar(k) {
+  if (k === atual) return;
+  atual = k;
+  const t = TIPOS[k];
+  svg.classList.add('foco');
+  svg.querySelectorAll('.p').forEach(g => g.classList.toggle('on', +g.dataset.k === k));
+  document.querySelectorAll('#lista button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.k === k));
+  $('f-num').textContent = k + 1;
+  $('f-grupo').textContent = t.grupo;
+  $('f-nome').textContent = t.nome;
+  $('f-desc').textContent = t.desc;
+  $('f-qtd').textContent = t.qtd + (t.qtd > 1 ? ' peças iguais' : ' peça');
+  $('f-tam').textContent = `${br(t.w, 1)} × ${br(t.h, 1)} mm`;
+  $('f-fix').textContent = t.fix;
+}
+svg.addEventListener('pointerover', e => { const g = e.target.closest('.p'); if (g) selecionar(+g.dataset.k); });
+svg.addEventListener('click', e => { const g = e.target.closest('.p'); if (g) selecionar(+g.dataset.k); });
+$('lista').addEventListener('click', e => { const b = e.target.closest('button'); if (b) selecionar(+b.dataset.k); });
+$('lista').addEventListener('focusin', e => { const b = e.target.closest('button'); if (b) selecionar(+b.dataset.k); });
+selecionar(Math.max(0, TIPOS.findIndex(t => t.nome.startsWith('Corpo trás'))));
+</script>
