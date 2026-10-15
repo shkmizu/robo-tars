@@ -44,6 +44,13 @@ Digite cada comando no Monitor Serial e clique em **Enviar**:
 
 Os comandos `a ...` e `t ...` são exatamente o que o `tars.py` manda ao robô pelo Bluetooth. Se eles funcionarem aqui, a parte do Arduino está certa.
 
+## Se algo não funcionar
+
+- **LCD apagado ou sem texto:** clique no LCD e, no painel de propriedades, escolha o tipo **MCP23008** e o endereço **32** (0x20). O sketch usa a biblioteca `Adafruit_LiquidCrystal`, que só fala com esse tipo.
+- **Ângulo do servo na tela:** o Micro servo do Tinkercad mostra 0–180°. O braço em pé (0° no sketch, 1500 µs) aparece como **~90°** no Tinkercad.
+- **Movimento lento:** a simulação costuma rodar mais devagar que o tempo real (veja o relógio no canto). As ações demoram mais que no robô, mas a sequência é a mesma.
+- **Comando ignorado:** confira se a simulação está rodando e se o texto não tem espaço sobrando no começo.
+
 ## O que o Tinkercad NÃO testa
 
 - o PCA9685, o OLED e o HC-05 de verdade (a fiação e as bibliotecas reais);
