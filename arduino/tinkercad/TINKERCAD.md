@@ -27,6 +27,8 @@ O Tinkercad Circuits não tem o PCA9685, o OLED SSD1306 nem o Bluetooth HC-05. P
 
 ## Testes
 
+Ao iniciar a simulação, o robô entra no **modo autônomo**: os servos seguem a coreografia sozinhos e o Monitor Serial mostra cada texto da tela (`[tela] ...`). Os comandos funcionam do mesmo jeito. Depois de cada comando, a coreografia espera 30 s (no relógio da simulação) e continua. Para testar os comandos com calma, mande `d` antes.
+
 Digite cada comando no Monitor Serial e clique em **Enviar**:
 
 | Comando | Resultado esperado | O que testa |
@@ -40,7 +42,7 @@ Digite cada comando no Monitor Serial e clique em **Enviar**:
 | `j 1 -60` | servo 2 vai para −60° | sentido espelhado do braço E |
 | `a voar` | `erro acao: voar` | ação inválida não trava |
 | `x` | `erro comando` | comando inválido não trava |
-| `d` | coreografia em loop; `d` de novo para parar | modo demonstração |
+| `d` | desliga o modo autônomo (LCD: "PRONTO"); `d` de novo liga e recomeça da cena 1 | modo autônomo |
 
 Os comandos `a ...` e `t ...` são exatamente o que o `tars.py` manda ao robô pelo Bluetooth. Se eles funcionarem aqui, a parte do Arduino está certa.
 
