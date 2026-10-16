@@ -5,8 +5,8 @@
 // Ligações:
 //   I²C compartilhado: Uno A4→SDA, A5→SCL, GND→GND do PCA9685 e do OLED (VCC deles no 5V do Uno).
 //   HC-05: VCC→5V, GND→GND, TXD→D10, RXD←D11 por divisor (D11 →1 kΩ→ RXD →2 kΩ→ GND).
-//   Bateria (4 × AA NiMH, 4,8 V) → chave → borne V+/GND do PCA9685 E pino 5V/GND do Uno.
-//   Para gravar o programa pelo USB, solte o fio da chave ao pino 5V do Uno antes de ligar o cabo.
+//   Bateria (4 × AA alcalinas, 6 V) → chave → borne V+/GND do PCA9685 E pino Vin/GND do Uno.
+//   (Nunca no pino 5V: 6 V queima o Uno.) Pelo Vin, o cabo USB pode ficar ligado junto.
 // Canais do PCA9685: 0 = braço D (+X) | 1 = braço E (−X)
 //
 // Comandos (uma linha cada, terminada em Enter), pelo USB (115200) ou pelo Bluetooth (9600):

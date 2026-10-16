@@ -112,7 +112,7 @@ Ensaiem as frases **em voz alta, na sala ou num lugar com barulho**: o reconheci
 ## No dia
 
 - [ ] Chegar cedo: Ollama aberto, HC-05 pareado, **`--diagnostico` sem nenhuma FALHA**, `tars.py` rodando com "IA pronta"
-- [ ] Levar: robô com pilhas carregadas, **4 pilhas reserva carregadas**, notebook + carregador, cabo USB (plano B), extensão de tomada
+- [ ] Levar: robô com pilhas novas, **4 pilhas AA reserva**, notebook + carregador, cabo USB (plano B), extensão de tomada
 - [ ] Plano C, se a IA falhar: o robô funciona sozinho no **modo autônomo** (é só ligar a chave)
 - [ ] Testar as 5 frases antes de chamarem o grupo
 - [ ] Fusion aberto no modelo montado e vídeo da vista explodida pronto
