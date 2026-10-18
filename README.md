@@ -97,6 +97,7 @@ Todo o I²C é compartilhado: o PCA9685 fica no endereço 0x40 e o OLED no 0x3C.
 |---|---|---|
 | Uno A4 / A5 / 5V / GND | PCA9685 SDA / SCL / VCC / GND (conector de baixo) | 4 jumpers macho-fêmea de 20 cm |
 | PCA9685 SDA / SCL / VCC / GND (conector de cima) | OLED SDA / SCL / VCC / GND | 4 jumpers fêmea-fêmea de 30 cm |
+| *ou, sem soldar o 2º conector do PCA9685:* Uno SDA / SCL (ao lado do AREF), 3.3V, GND | OLED SDA / SCL / VCC / GND | 4 jumpers macho-fêmea de 30 cm |
 | SG90 do braço D (+X) | PCA9685 canal 0 | cabo do servo (250 mm) |
 | SG90 do braço E (−X) | PCA9685 canal 1 | cabo do servo (250 mm) |
 | Bateria: 4 pilhas AA **alcalinas** no suporte (6 V), dentro do corpo | chave → borne V+/GND do PCA9685 e pino **Vin**/GND do Uno | jumpers |

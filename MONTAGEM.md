@@ -49,6 +49,7 @@ A ordem importa: **teste a eletrônica antes de montar a madeira**, porque depoi
    |---|---|---|
    | Uno **A4 / A5 / 5V / GND** | PCA9685 **SDA / SCL / VCC / GND** | jumpers macho-fêmea 20 cm |
    | PCA9685 (o outro conector) | OLED **SDA / SCL / VCC / GND** | jumpers fêmea-fêmea 30 cm |
+   | *ou, se o PCA9685 veio com só um conector soldado:* Uno **SDA / SCL** (os 2 pinos ao lado do AREF), **3.3V** e **GND** | OLED **SDA / SCL / VCC / GND** (o OLED aceita 3,3 V) | jumpers macho-fêmea 30 cm |
    | Servo do braço direito | PCA9685 **canal 0** (fio marrom no GND, fileira de baixo) | cabo do servo |
    | Servo do braço esquerdo | PCA9685 **canal 1** | cabo do servo |
    | Bateria (4 pilhas AA **alcalinas** no suporte) | chave → borne **V+ / GND** do PCA9685 | fios do suporte |
