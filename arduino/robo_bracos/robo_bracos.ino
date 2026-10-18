@@ -256,7 +256,14 @@ void lerComandos() {
 
 void setup() {
   Serial.begin(115200);
+  Serial.println(F("TARS ligando..."));
   bt.begin(9600);             // velocidade de fábrica do HC-05
+  // Um fio solto ou encostado no SDA/SCL travaria o I²C para sempre; com o timeout o Uno segue.
+  Wire.begin();
+  Wire.setWireTimeout(25000, true);
+  Wire.beginTransmission(0x40);
+  Serial.println(Wire.endTransmission() == 0 ? F("PCA9685 OK")
+                                             : F("PCA9685 nao encontrado (0x40): confira SDA/SCL/VCC/GND"));
   pca.begin();
   pca.setOscillatorFrequency(OSCILADOR_HZ);
   pca.setPWMFreq(50);
