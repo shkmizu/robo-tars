@@ -104,6 +104,8 @@ Todo o I²C é compartilhado: o PCA9685 fica no endereço 0x40 e o OLED no 0x3C.
 | Capacitor de 470 µF | borne V+/GND do PCA9685 (respeitar a polaridade) | — |
 | USB do Uno | janela na tampa traseira | cabo USB (alimenta o Uno) |
 
+**Sem PCA9685** (`#define USAR_PCA9685 0` no `robo_bracos.ino`, o padrão atual): o sinal do servo do braço D vai no **D9** e o do braço E no **D6**; os fios vermelhos no **5V** do Uno e os marrons no **GND**. A bateria entra só no **Vin/GND** do Uno. O OLED continua no SDA/SCL. Para voltar ao PCA9685, mude para `1`.
+
 **Onde fica cada componente:**
 - **Uno:** deitado no fundo, com o USB voltado para a janela traseira.
 - **PCA9685:** em pé na lateral E, metade da frente. O borne fica voltado para trás, acessível pela tampa.

@@ -1,6 +1,7 @@
-// robo_bracos.ino — TARS: 2 braços (micro servos SG90 no PCA9685) + tela OLED + Bluetooth HC-05.
-// Bibliotecas (Gerenciador de Bibliotecas da IDE): "Adafruit PWM Servo Driver Library",
-// "Adafruit SSD1306" e "Adafruit GFX Library". SoftwareSerial já vem com a IDE.
+// robo_bracos.ino — TARS: 2 braços (micro servos SG90) + tela OLED + Bluetooth HC-05.
+// Os servos vão no PCA9685 ou direto no Uno: escolha em USAR_PCA9685, logo abaixo.
+// Bibliotecas (Gerenciador de Bibliotecas da IDE): "Adafruit SSD1306" e "Adafruit GFX Library";
+// com PCA9685, também "Adafruit PWM Servo Driver Library". Servo e SoftwareSerial já vêm com a IDE.
 //
 // Ligações:
 //   I²C compartilhado: Uno A4→SDA, A5→SCL, GND→GND do PCA9685 e do OLED (VCC deles no 5V do Uno).
@@ -17,13 +18,27 @@
 //   d                  liga/desliga o modo autônomo (coreografia; liga sozinho ao ligar o robô)
 // O robô responde "ok" quando termina (ou "erro ...").
 
+// 1 = servos no PCA9685 (projeto original). 0 = servos direto no Uno, sem PCA9685:
+//   servo braço D: sinal → D9 | servo braço E: sinal → D6 | vermelho → 5V do Uno | marrom → GND.
+//   (D10/D11 ficam livres para o HC-05.) A bateria entra só no Vin/GND do Uno.
+#define USAR_PCA9685 0
+
 #include <Wire.h>
 #include <SoftwareSerial.h>
+#if USAR_PCA9685
 #include <Adafruit_PWMServoDriver.h>
+#else
+#include <Servo.h>
+#endif
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
+#if USAR_PCA9685
 Adafruit_PWMServoDriver pca(0x40);
+#else
+Servo servos[2];
+const uint8_t PINOS_SERVO[2] = {9, 6};   // canal 0 = braço D, canal 1 = braço E
+#endif
 Adafruit_SSD1306 tela(128, 64, &Wire, -1);
 SoftwareSerial bt(10, 11);   // RX ← TXD do HC-05, TX → RXD do HC-05 (pelo divisor)
 bool temTela = false;
@@ -31,6 +46,14 @@ bool temTela = false;
 // O oscilador interno do PCA9685 varia entre placas (~23–27 MHz). Se "u 0 1500" não deixar
 // o servo no meio do curso, ajuste aqui (ou meça a saída com um frequencímetro: deve dar 50 Hz).
 const uint32_t OSCILADOR_HZ = 27000000;
+
+void escreverPulso(uint8_t canal, int us) {
+#if USAR_PCA9685
+  pca.writeMicroseconds(canal, us);
+#else
+  if (canal < 2) servos[canal].writeMicroseconds(us);
+#endif
+}
 
 struct Junta {
   uint8_t canal;
@@ -78,7 +101,7 @@ void mostrar(const __FlashStringHelper *msg) {
 void moverJunta(uint8_t i, float graus) {
   const Junta &j = juntas[i];
   graus = constrain(graus, j.angMin, j.angMax);
-  pca.writeMicroseconds(j.canal, j.us0 + (j.us90 - j.us0) * graus / 90.0);
+  escreverPulso(j.canal, j.us0 + (j.us90 - j.us0) * graus / 90.0);
   atual[i] = graus;
 }
 
@@ -217,7 +240,7 @@ void processar(char *linha, Stream &resp) {
     demo = false;   // calibrando: o modo autônomo não mexe nos braços
     long canal = strtol(arg, &resto, 10);
     long us = strtol(resto, NULL, 10);
-    pca.writeMicroseconds(canal, us);
+    escreverPulso(canal, us);
     resp.print(F("ok canal ")); resp.print(canal); resp.print(F(" = ")); resp.println(us);
   } else if (cmd == 'j') {
     long i = strtol(arg, &resto, 10);
@@ -267,6 +290,7 @@ void setup() {
   // Um fio solto ou encostado no SDA/SCL travaria o I²C para sempre; com o timeout o Uno segue.
   Wire.begin();
   Wire.setWireTimeout(25000, true);
+#if USAR_PCA9685
   Wire.beginTransmission(0x40);
   Serial.println(Wire.endTransmission() == 0 ? F("PCA9685 OK")
                                              : F("PCA9685 nao encontrado (0x40): confira SDA/SCL/VCC/GND"));
@@ -275,6 +299,15 @@ void setup() {
   pca.setPWMFreq(50);
   delay(10);
   for (uint8_t i = 0; i < N; i++) moverJunta(i, atual[i]);
+#else
+  // Um servo de cada vez: os dois arrancando juntos puxam corrente demais e podem reiniciar o Uno.
+  for (uint8_t i = 0; i < N; i++) {
+    servos[juntas[i].canal].attach(PINOS_SERVO[juntas[i].canal], 500, 2500);
+    moverJunta(i, atual[i]);
+    delay(300);
+  }
+  Serial.println(F("Servos direto no Uno: D9 = braco D, D6 = braco E"));
+#endif
   // tela.begin() diz que deu certo mesmo sem tela, então primeiro vê se algo responde no 0x3C.
   Wire.beginTransmission(0x3C);
   temTela = Wire.endTransmission() == 0 && tela.begin(SSD1306_SWITCHCAPVCC, 0x3C);   // sem tela, o resto funciona igual
