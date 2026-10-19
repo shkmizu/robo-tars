@@ -269,7 +269,9 @@ void setup() {
   pca.setPWMFreq(50);
   delay(10);
   for (uint8_t i = 0; i < N; i++) moverJunta(i, atual[i]);
-  temTela = tela.begin(SSD1306_SWITCHCAPVCC, 0x3C);   // sem tela, o resto funciona igual
+  // tela.begin() diz que deu certo mesmo sem tela, então primeiro vê se algo responde no 0x3C.
+  Wire.beginTransmission(0x3C);
+  temTela = Wire.endTransmission() == 0 && tela.begin(SSD1306_SWITCHCAPVCC, 0x3C);   // sem tela, o resto funciona igual
   mostrar(F("HUMOR 75%\nHONESTIDADE 90%"));
   Serial.println(temTela ? F("Tela OK") : F("Tela nao encontrada (0x3C)"));
   Serial.println(F("Comandos: a <acao> | t <texto> | u <canal> <us> | j <junta> <graus> | d"));
