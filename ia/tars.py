@@ -170,7 +170,9 @@ def microfone_offline(pasta_modelo):
 
 def _voz_portugues(motor):
     for v in motor.getProperty('voices'):
-        nome = (v.name + ' ' + v.id).lower()
+        # No Windows o nome diz o idioma; no Mac (ex.: "Luciana") ele só aparece em v.languages.
+        idiomas = ' '.join(str(l) for l in (getattr(v, 'languages', None) or []))
+        nome = (v.name + ' ' + v.id + ' ' + idiomas).lower()
         if 'portug' in nome or 'brazil' in nome or 'pt-br' in nome or 'pt_br' in nome:
             return v
     return None
@@ -181,8 +183,8 @@ def voz():
     import pyttsx3  # pip install pyttsx3
     pt = _voz_portugues(pyttsx3.init())
     if not pt:
-        print('Aviso: nenhuma voz em português no Windows; vai falar com sotaque. '
-              'Instale em Configurações → Hora e idioma → Fala.')
+        print('Aviso: nenhuma voz em português; vai falar com sotaque. Windows: Configurações → '
+              'Hora e idioma → Fala. Mac: Ajustes → Acessibilidade → Conteúdo Falado → Voz do sistema.')
 
     def falar(texto):
         motor = pyttsx3.init()   # um motor novo por fala: no Windows o pyttsx3 às vezes emudece
