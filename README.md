@@ -115,23 +115,16 @@ Os pinos do OLED e os conectores saem cerca de 23 mm para trás e não alcançam
 
 ## Montagem
 
-Guia completo, passo a passo e com checklist: [MONTAGEM.md](MONTAGEM.md). Resumo:
+Guia completo, passo a passo e com checklist: [MONTAGEM.md](MONTAGEM.md). Roteiro de bancada para o celular: https://claude.ai/artifact/LCUTgscz8zunP4qHRRn4NE (privado; compartilhe pelo menu Share). Resumo:
 
-1. **Teste:** corte o pente de teste e confira o kerf (veja `laser/LEIA-ME_tecnico.txt`).
-2. **Corpo:**
-   - Cole os reforços nas laterais.
-   - Cole os 2 discos do mancal em cada lateral, por fora. Use um SG90 encaixado na janela como gabarito de alinhamento.
-   - Monte frente, laterais, topo e fundo com cola PVA. A tampa traseira entra só no fim, sem cola.
-3. **Base:** prenda os espaçadores do Uno no fundo e cole a base por baixo. As cabeças dos parafusos ficam nos furos de alívio.
-4. **Servos:** com o SG90 por dentro, passe o topo pela janela e aparafuse as abas com os parafusos dele.
-5. **Eletrônica:** PCA9685, OLED, bateria, chave e capacitor, conforme a tabela de ligações.
-6. **Centralizar os servos:** carregue o sketch, abra o Monitor Serial e mande `u 0 1500` e `u 1 1500`.
-7. **Braços:**
-   - Parafuse o horn no anteparo.
-   - Monte a caixa do braço, deixando a tampa externa aberta.
-   - Encaixe o braço **em pé, alinhado com o corpo**, sobre o disco do eixo e no eixo do servo.
-   - Aperte o parafuso do horn pelo furo central do anteparo e feche a tampa.
-8. **Calibrar:** com `u <canal> <us>`, ache o pulso do braço em pé (0°) e deitado à frente (90°). Anote em `us0`/`us90` no sketch.
+1. **Cada componente sozinho**, na mesa, só com o USB: Uno, servo direito (D9), servo esquerdo (D6), OLED (A4/A5) e pilhas no multímetro. Centralize os servos com `u 0 1500` e `u 1 1500`.
+2. **Teste de encaixe** de cada componente no corpo, sem ligar.
+3. **Ensaio geral** fora do robô: tudo ligado, pilhas na mini protoboard (trilha + nos servos e no Vin), 5 minutos de coreografia.
+4. **Montagem no corpo**, de baixo para cima: Uno, mini protoboard, servos, OLED, pilhas na tampa traseira; jumpers presos com cola quente.
+5. **Braços**: horn no anteparo, braço em pé no eixo centralizado, vela no mancal.
+6. **Calibrar** com `u <canal> <us>` e anotar `us0`/`us90` no sketch.
+
+O projeto original usa um PCA9685 entre o Uno e os servos; ele continua disponível com `#define USAR_PCA9685 1` (veja a variante no fim do MONTAGEM.md).
 
 ## Pontos para testar antes da versão final
 
