@@ -258,6 +258,12 @@ void setup() {
   Serial.begin(115200);
   Serial.println(F("TARS ligando..."));
   bt.begin(9600);             // velocidade de fábrica do HC-05
+  // SDA e SCL ficam em 1 quando livres; em 0, o fio está encostado no GND (ou o módulo está com defeito).
+  pinMode(SDA, INPUT_PULLUP);
+  pinMode(SCL, INPUT_PULLUP);
+  delay(5);
+  if (!digitalRead(SDA)) Serial.println(F("ERRO: SDA (A4) preso em 0 - encostado no GND?"));
+  if (!digitalRead(SCL)) Serial.println(F("ERRO: SCL (A5) preso em 0 - encostado no GND?"));
   // Um fio solto ou encostado no SDA/SCL travaria o I²C para sempre; com o timeout o Uno segue.
   Wire.begin();
   Wire.setWireTimeout(25000, true);
