@@ -97,9 +97,10 @@ Todo o I²C é compartilhado: o PCA9685 fica no endereço 0x40 e o OLED no 0x3C.
 |---|---|---|
 | Uno A4 / A5 / 5V / GND | PCA9685 SDA / SCL / VCC / GND (conector de baixo) | 4 jumpers macho-fêmea de 20 cm |
 | PCA9685 SDA / SCL / VCC / GND (conector de cima) | OLED SDA / SCL / VCC / GND | 4 jumpers fêmea-fêmea de 30 cm |
+| *ou, sem soldar o 2º conector do PCA9685:* Uno SDA / SCL (ao lado do AREF), 3.3V, GND | OLED SDA / SCL / VCC / GND | 4 jumpers macho-fêmea de 30 cm |
 | SG90 do braço D (+X) | PCA9685 canal 0 | cabo do servo (250 mm) |
 | SG90 do braço E (−X) | PCA9685 canal 1 | cabo do servo (250 mm) |
-| Fonte 5 V 2 A (plugue P4, pelo furo da tampa traseira) | adaptador P4 com borne → chave → borne V+/GND do PCA9685 | fio 22 AWG |
+| Bateria: 4 pilhas AA **alcalinas** no suporte (6 V), dentro do corpo | chave → borne V+/GND do PCA9685 e pino **Vin**/GND do Uno | jumpers |
 | Capacitor de 470 µF | borne V+/GND do PCA9685 (respeitar a polaridade) | — |
 | USB do Uno | janela na tampa traseira | cabo USB (alimenta o Uno) |
 
@@ -121,7 +122,7 @@ Guia completo, passo a passo e com checklist: [MONTAGEM.md](MONTAGEM.md). Resumo
    - Monte frente, laterais, topo e fundo com cola PVA. A tampa traseira entra só no fim, sem cola.
 3. **Base:** prenda os espaçadores do Uno no fundo e cole a base por baixo. As cabeças dos parafusos ficam nos furos de alívio.
 4. **Servos:** com o SG90 por dentro, passe o topo pela janela e aparafuse as abas com os parafusos dele.
-5. **Eletrônica:** PCA9685, OLED, fonte, chave e capacitor, conforme a tabela de ligações.
+5. **Eletrônica:** PCA9685, OLED, bateria, chave e capacitor, conforme a tabela de ligações.
 6. **Centralizar os servos:** carregue o sketch, abra o Monitor Serial e mande `u 0 1500` e `u 1 1500`.
 7. **Braços:**
    - Parafuse o horn no anteparo.
@@ -145,4 +146,4 @@ Guia completo, passo a passo e com checklist: [MONTAGEM.md](MONTAGEM.md). Resumo
   ```bash
   python demo/gerar_demo.py
   ```
-- `arduino/robo_bracos/robo_bracos.ino`: 2 servos + OLED. A `coreografia()` é sua.
+- `arduino/robo_bracos/robo_bracos.ino`: 2 servos + OLED + HC-05. Ao ligar, entra no **modo autônomo**: repete sozinho a `coreografia()` (9 cenas, fáceis de editar), sem notebook nem celular. Qualquer comando pausa a coreografia por 30 s; `d` liga/desliga.

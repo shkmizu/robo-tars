@@ -122,7 +122,7 @@ class Robo:
         self._enviar(f'a {nome}', esperar=False)
 
     def texto(self, msg):
-        self._enviar(f't {msg[:64]}', esperar=True)
+        self._enviar(f't {msg[:60]}', esperar=True)  # 't ' + 60 + Enter cabe nos 64 bytes do Uno
 
 
 def microfone():

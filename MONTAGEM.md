@@ -32,6 +32,9 @@ A ordem importa: **teste a eletrônica antes de montar a madeira**, porque depoi
 - Bluetooth: módulo **HC-05**, resistores de **1 kΩ e 2 kΩ**, 4 jumpers macho-fêmea a mais
 - No computador: Arduino IDE, **Python 3**, **Ollama**, microfone e caixa de som (ou os do notebook)
 
+- Energia: **4 pilhas AA alcalinas comuns** e suporte para 4 pilhas (6 V). Os servos aceitam 6 V; o Uno recebe pelo pino **Vin**, e o regulador dele baixa a tensão. **Nunca ligue as alcalinas no pino 5V do Uno**: novas, chegam a 6,4 V e queimam a placa. Bateria de 9 V não serve, porque não aguenta os servos.
+  - Se usar **recarregáveis NiMH** (4,8 V), ligue no pino **5V** em vez do Vin, e solte esse fio sempre que conectar o cabo USB.
+
 ---
 
 ## Fase 1: Testar a eletrônica na mesa (cerca de 1 h)
@@ -46,20 +49,22 @@ A ordem importa: **teste a eletrônica antes de montar a madeira**, porque depoi
    |---|---|---|
    | Uno **A4 / A5 / 5V / GND** | PCA9685 **SDA / SCL / VCC / GND** | jumpers macho-fêmea 20 cm |
    | PCA9685 (o outro conector) | OLED **SDA / SCL / VCC / GND** | jumpers fêmea-fêmea 30 cm |
+   | *ou, se o PCA9685 veio com só um conector soldado:* Uno **SDA / SCL** (os 2 pinos ao lado do AREF), **3.3V** e **GND** | OLED **SDA / SCL / VCC / GND** (o OLED aceita 3,3 V) | jumpers macho-fêmea 30 cm |
    | Servo do braço direito | PCA9685 **canal 0** (fio marrom no GND, fileira de baixo) | cabo do servo |
    | Servo do braço esquerdo | PCA9685 **canal 1** | cabo do servo |
-   | Fonte 5 V | adaptador P4 → chave → borne **V+ / GND** do PCA9685 | fio 22 AWG |
-   | Depois da chave | também no pino **5V** e **GND** do Uno (alimenta o Uno sem o cabo USB) | fio 22 AWG |
+   | Bateria (4 pilhas AA **alcalinas** no suporte) | chave → borne **V+ / GND** do PCA9685 | fios do suporte |
+   | Depois da chave | também no pino **Vin** e **GND** do Uno (alimenta o Uno sem o cabo USB) | jumper com uma ponta cortada, preso no borne |
    | Capacitor 470 µF | mesmo borne (perna mais curta, −, no GND) | — |
    | HC-05 **VCC / GND** | **5V / GND** do Uno | jumpers macho-fêmea |
    | HC-05 **TXD** | Uno **D10** | jumper |
    | Uno **D11** → resistor 1 kΩ → HC-05 **RXD** | e do RXD → resistor 2 kΩ → **GND** (divisor: protege o HC-05, que é de 3,3 V) | jumpers + resistores |
 
-   > **Sempre que ligar o cabo USB no Uno, solte o fio que vai da chave ao pino 5V do Uno.** O Uno fica alimentado só pelo USB e os servos continuam na fonte. Assim o Uno nunca recebe energia pelos dois lados ao mesmo tempo. Deixe esse fio num conector fácil de soltar.
+   > Pelo pino **Vin**, o cabo USB pode ficar ligado junto com as pilhas: o Uno escolhe sozinho a fonte. (Só com NiMH no pino 5V é preciso soltar esse fio antes de ligar o USB.)
 
 3. Abra `arduino/robo_bracos/robo_bracos.ino`, conecte o Uno pelo USB e clique em **Carregar**.
-4. Ligue a chave da fonte. A tela deve mostrar **"TARS / HUMOR 75% / HONESTIDADE 90%"**.
-5. Abra o **Monitor Serial** (115200, "Nova linha") e mande `u 0 1500` e depois `u 1 1500`. Os dois servos vão para o **meio do curso**.
+4. Ligue a chave. A tela deve mostrar **"TARS / HUMOR 75% / HONESTIDADE 90%"**.
+   Logo depois começa o **modo autônomo**: os servos se mexem sozinhos, seguindo a coreografia.
+5. Abra o **Monitor Serial** (115200, "Nova linha") e mande `u 0 1500` e depois `u 1 1500`. Os dois servos vão para o **meio do curso**. O comando `u` desliga o modo autônomo, então eles ficam parados.
 6. **Desligue com os servos nessa posição** e não gire mais os eixos com a mão. Os braços serão montados com os servos centralizados.
 
 > Se algo não funcionar aqui, é muito mais fácil corrigir agora. Veja [Problemas comuns](#problemas-comuns).
@@ -105,8 +110,8 @@ A ordem importa: **teste a eletrônica antes de montar a madeira**, porque depoi
 18. Refaça as ligações da Fase 1 dentro do corpo: Uno → PCA9685, PCA9685 → OLED e servos nos canais 0 (direito) e 1 (esquerdo).
 19. Na **tampa traseira**:
     - a **chave KCD1** entra por pressão no recorte retangular;
-    - o plugue da fonte passa pelo furo redondo e liga no adaptador P4 com borne, dentro do corpo;
-    - adaptador → chave → borne V+/GND do PCA9685, com o capacitor junto.
+    - o **suporte das pilhas** fica em pé, encostado na face de dentro da tampa traseira ou do fundo, longe do PCA9685; prenda com fita dupla-face (o furo redondo da tampa fica sem uso);
+    - suporte → chave → borne V+/GND do PCA9685 e pino Vin/GND do Uno, com o capacitor junto.
 20. Confira se o **USB do Uno** está alinhado com a janela de baixo da tampa traseira. Prenda os fios soltos com fita para não encostarem nos servos.
     - Cole o **HC-05** com fita dupla-face na face de dentro da lateral direita, abaixo do servo.
 21. **Teste de novo**, como no passo 4, antes de seguir.
@@ -137,22 +142,22 @@ Para cada braço:
     - Pelo furo central do anteparo, com o braço ainda aberto, aperte o parafuso do horn no eixo.
     - **Não mexa no braço por 1 h.** Como o horn está centrado no eixo, o furo do braço posiciona o disco exatamente no lugar.
     - Cuidado para a cola não escorrer até o furo do braço; a vela ajuda a evitar que grude.
-27. Depois de seco, gire o braço com a mão, **bem devagar e com a fonte desligada**. Ele deve girar sem prender. Se raspar, passe mais vela.
+27. Depois de seco, gire o braço com a mão, **bem devagar e com a chave desligada**. Ele deve girar sem prender. Se raspar, passe mais vela.
 28. Feche a tampa externa do braço com 4 parafusos M3. Repita para o outro braço.
 
 ---
 
 ## Fase 7: Calibrar e testar (cerca de 30 min)
 
-29. Solte o fio do 5V do Uno, ligue o cabo USB e a fonte. No Monitor Serial:
+29. Ligue o cabo USB e a chave. No Monitor Serial (o primeiro `u` desliga o modo autônomo):
     - mande `u 0 1500`: o braço direito deve ficar em pé, alinhado com o corpo;
     - procure com `u 0 <valor>` o pulso em que o braço fica **deitado para a frente** (90°), algo entre 550 e 2450;
     - faça o mesmo com o canal 1.
 30. Anote os valores no sketch, na tabela `juntas[]`: `us0` é o braço em pé e `us90` é o braço à frente. Carregue de novo.
 31. Teste com `j 0 45`, `j 1 -45` e assim por diante. Os braços devem ir para os ângulos pedidos, de −90° a +90°.
-32. **Coreografia:** escreva a sua dentro de `coreografia()` (há um exemplo da "passada" no comentário). Ative e desative com `d` no Monitor Serial.
+32. **Coreografia (modo autônomo):** já vem pronta em `coreografia()`, com 9 cenas curtas (saudar, caminhar, "modo roda", dança, piada, frase do filme...). Para mudar, edite as cenas. Ela começa sozinha ao ligar o robô. Qualquer comando a pausa por 30 s, e `d` a liga ou desliga.
 33. Teste as ações: `a saudar`, `a dancar`, `a sim`, `a nao`, `t OLA TURMA`.
-34. Desligue o cabo USB e **reconecte o fio do 5V do Uno**. Daqui em diante o robô funciona sem cabo, pelo Bluetooth.
+34. Desligue o cabo USB. Daqui em diante o robô funciona sem cabo: sozinho (modo autônomo) ou pelo Bluetooth.
 
 ### Comandos do Monitor Serial (e do Bluetooth)
 
@@ -162,7 +167,7 @@ Para cada braço:
 | `t <texto>` | escreve na tela | `t OLA TURMA` |
 | `u <canal> <us>` | pulso bruto no servo (para calibrar) | `u 0 1500` |
 | `j <braço> <graus>` | move um braço dentro dos limites (−90 a 90) | `j 1 45` |
-| `d` | liga ou desliga a coreografia | `d` |
+| `d` | liga ou desliga o modo autônomo (coreografia) | `d` |
 
 ---
 
@@ -242,8 +247,8 @@ Pinte **depois** de tudo montado e testado, porque a cola não pega bem em tinta
 | Sintoma | Causa provável | O que fazer |
 |---|---|---|
 | Tela apagada | fio trocado ou endereço do OLED | confira SDA/SCL; o Monitor Serial avisa "Tela nao encontrada" |
-| Servo não mexe | fonte desligada ou sem GND comum | ligue a chave; o GND da fonte e o do Uno precisam se encontrar no PCA9685 |
-| Servo treme ou o Arduino reinicia | falta de corrente | capacitor no borne; fonte de pelo menos 2 A |
+| Servo não mexe | chave desligada ou sem GND comum | ligue a chave; o GND da bateria e o do Uno precisam se encontrar no PCA9685 |
+| Servo treme ou o Arduino reinicia | falta de corrente | capacitor no borne; pilhas novas (troque as 4 juntas) |
 | Braço vai para trás em vez de para a frente | sentido invertido | troque o lado do `us90` na tabela `juntas[]` |
 | Braço trava no meio do giro | disco do eixo descentralizado ou cola no mancal | passe vela; se não resolver, lixe de leve a borda do disco Ø46 |
 | Encaixe muito frouxo | kerf diferente do previsto | cola PVA preenche folgas pequenas |

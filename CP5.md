@@ -84,7 +84,7 @@ robo.acao(acao)
 | 0:00–1:00 | Membro 1 | O que é o TARS, por que o formato de 4 blocos, tamanho (30 × 15 × 8,4 cm) |
 | 1:00–3:00 | Membros 1 e 2 | Mecânica: caixas com encaixe dentado, braço com eixo no meio (equilibrado → o SG90 aguenta), mancal de MDF |
 | 3:00–4:30 | Membro 4 | Fusion no notebook: modelo montado, braço girando pela junta, vista explodida |
-| 4:30–6:00 | Membro 3 | Eletrônica: Uno, PCA9685, OLED, HC-05, fonte; como a IA fala com o robô |
+| 4:30–6:00 | Membro 3 | Eletrônica: Uno, PCA9685, OLED, HC-05, bateria; como a IA fala com o robô |
 | 6:00–9:00 | Todos | **Demonstração por voz** (frases abaixo) |
 | 9:00–10:00 | — | Perguntas |
 
@@ -112,7 +112,8 @@ Ensaiem as frases **em voz alta, na sala ou num lugar com barulho**: o reconheci
 ## No dia
 
 - [ ] Chegar cedo: Ollama aberto, HC-05 pareado, **`--diagnostico` sem nenhuma FALHA**, `tars.py` rodando com "IA pronta"
-- [ ] Levar: robô, notebook + carregador, fonte 5 V, cabo USB (plano B), extensão de tomada
+- [ ] Levar: robô com pilhas novas, **4 pilhas AA reserva**, notebook + carregador, cabo USB (plano B), extensão de tomada
+- [ ] Plano C, se a IA falhar: o robô funciona sozinho no **modo autônomo** (é só ligar a chave)
 - [ ] Testar as 5 frases antes de chamarem o grupo
 - [ ] Fusion aberto no modelo montado e vídeo da vista explodida pronto
 - [ ] Cada membro sabe a sua parte do roteiro

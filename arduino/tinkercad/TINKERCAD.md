@@ -27,6 +27,8 @@ O Tinkercad Circuits não tem o PCA9685, o OLED SSD1306 nem o Bluetooth HC-05. P
 
 ## Testes
 
+Ao iniciar a simulação, o robô entra no **modo autônomo**: os servos seguem a coreografia sozinhos e o Monitor Serial mostra cada texto da tela (`[tela] ...`). Os comandos funcionam do mesmo jeito. Depois de cada comando, a coreografia espera 30 s (no relógio da simulação) e continua. Para testar os comandos com calma, mande `d` antes.
+
 Digite cada comando no Monitor Serial e clique em **Enviar**:
 
 | Comando | Resultado esperado | O que testa |
@@ -40,9 +42,16 @@ Digite cada comando no Monitor Serial e clique em **Enviar**:
 | `j 1 -60` | servo 2 vai para −60° | sentido espelhado do braço E |
 | `a voar` | `erro acao: voar` | ação inválida não trava |
 | `x` | `erro comando` | comando inválido não trava |
-| `d` | coreografia em loop; `d` de novo para parar | modo demonstração |
+| `d` | desliga o modo autônomo (LCD: "PRONTO"); `d` de novo liga e recomeça da cena 1 | modo autônomo |
 
 Os comandos `a ...` e `t ...` são exatamente o que o `tars.py` manda ao robô pelo Bluetooth. Se eles funcionarem aqui, a parte do Arduino está certa.
+
+## Se algo não funcionar
+
+- **LCD apagado ou sem texto:** clique no LCD e, no painel de propriedades, escolha o tipo **MCP23008** e o endereço **32** (0x20). O sketch usa a biblioteca `Adafruit_LiquidCrystal`, que só fala com esse tipo.
+- **Ângulo do servo na tela:** o Micro servo do Tinkercad mostra 0–180°. O braço em pé (0° no sketch, 1500 µs) aparece como **~90°** no Tinkercad.
+- **Movimento lento:** a simulação costuma rodar mais devagar que o tempo real (veja o relógio no canto). As ações demoram mais que no robô, mas a sequência é a mesma.
+- **Comando ignorado:** confira se a simulação está rodando e se o texto não tem espaço sobrando no começo.
 
 ## O que o Tinkercad NÃO testa
 
