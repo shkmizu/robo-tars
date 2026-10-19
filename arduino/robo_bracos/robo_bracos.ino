@@ -21,7 +21,7 @@
 // 1 = servos no PCA9685 (projeto original). 0 = servos direto no Uno, sem PCA9685:
 //   servo braço D: sinal → D9 | servo braço E: sinal → D6 | vermelho → 5V do Uno | marrom → GND.
 //   (D10/D11 ficam livres para o HC-05.) A bateria entra só no Vin/GND do Uno.
-#define USAR_PCA9685 0
+#define USAR_PCA9685 1
 
 #include <Wire.h>
 #include <SoftwareSerial.h>

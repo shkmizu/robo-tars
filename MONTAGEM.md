@@ -10,7 +10,7 @@ A ordem importa:
 
 Se algo falhar, você sabe exatamente o quê. Depois de fechar o corpo, fica difícil mexer.
 
-Este guia usa os **servos ligados direto no Uno**, sem o PCA9685 (é o padrão do código: `#define USAR_PCA9685 0`). Para montar com o PCA9685, veja [Variante com PCA9685](#variante-com-pca9685) no fim.
+Este guia usa os **servos ligados direto no Uno**, sem o PCA9685: no topo do código, deixe `#define USAR_PCA9685 0`. O código no repositório vem com `1` (com PCA9685); para montar assim, veja [Variante com PCA9685](#variante-com-pca9685) no fim.
 
 - Mapa das peças na chapa: https://claude.ai/artifact/1jdB73SS3mzryoovjYr6sd
 - Demonstração 3D (ver como as peças se encaixam): https://claude.ai/artifact/CNWZmAH6V9aymZm9zFhAPm
@@ -51,7 +51,7 @@ Este guia usa os **servos ligados direto no Uno**, sem o PCA9685 (é o padrão d
 1. **Arduino IDE** e, pelo *Gerenciador de Bibliotecas*:
    - *Adafruit SSD1306* (aceite instalar as dependências *Adafruit GFX* e *BusIO*)
    - a biblioteca *Servo* já vem com o IDE
-2. Abra `arduino/robo_bracos/robo_bracos.ino`. Confira no topo: `#define USAR_PCA9685 0`.
+2. Abra `arduino/robo_bracos/robo_bracos.ino`. Para os servos direto no Uno, deixe no topo: `#define USAR_PCA9685 0` (com o PCA9685, `1`).
 3. Em *Ferramentas*: **Placa → Arduino Uno** e a **Porta** COM do Uno. Placas compatíveis podem precisar do **driver CH340**.
 
 ### Energia: o que pode e o que não pode
@@ -335,7 +335,7 @@ Pinte **depois** de tudo montado e testado, porque a cola não pega bem em tinta
 
 O projeto original usa um driver **PCA9685** entre o Uno e os servos. Ele só vale a pena com **jumpers bons**: com fios improvisados, o contato no I²C falha e os servos não respondem.
 
-1. No topo do `robo_bracos.ino`, troque para `#define USAR_PCA9685 1` e instale também a *Adafruit PWM Servo Driver Library*.
+1. No topo do `robo_bracos.ino`, deixe `#define USAR_PCA9685 1` (é o padrão do repositório) e instale também a *Adafruit PWM Servo Driver Library*.
 2. Ligações:
 
    | De | Para |

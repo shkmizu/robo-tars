@@ -104,7 +104,7 @@ Todo o I²C é compartilhado: o PCA9685 fica no endereço 0x40 e o OLED no 0x3C.
 | Capacitor de 470 µF | borne V+/GND do PCA9685 (respeitar a polaridade) | — |
 | USB do Uno | janela na tampa traseira | cabo USB (alimenta o Uno) |
 
-**Sem PCA9685** (`#define USAR_PCA9685 0` no `robo_bracos.ino`, o padrão atual): o sinal do servo do braço D vai no **D9** e o do braço E no **D6**; os fios vermelhos no **5V** do Uno e os marrons no **GND**. A bateria entra só no **Vin/GND** do Uno. O OLED continua no SDA/SCL. Para voltar ao PCA9685, mude para `1`.
+**Sem PCA9685** (`#define USAR_PCA9685 0` no `robo_bracos.ino`; o padrão do repositório é `1`, com PCA9685): o sinal do servo do braço D vai no **D9** e o do braço E no **D6**; os fios vermelhos no **5V** do Uno e os marrons no **GND**. A bateria entra só no **Vin/GND** do Uno. O OLED continua no SDA/SCL. Com o PCA9685, deixe `1`.
 
 **Onde fica cada componente:**
 - **Uno:** deitado no fundo, com o USB voltado para a janela traseira.
@@ -124,7 +124,7 @@ Guia completo, passo a passo e com checklist: [MONTAGEM.md](MONTAGEM.md). Roteir
 5. **Braços**: horn no anteparo, braço em pé no eixo centralizado, vela no mancal.
 6. **Calibrar** com `u <canal> <us>` e anotar `us0`/`us90` no sketch.
 
-O projeto original usa um PCA9685 entre o Uno e os servos; ele continua disponível com `#define USAR_PCA9685 1` (veja a variante no fim do MONTAGEM.md).
+O projeto original usa um PCA9685 entre o Uno e os servos; o código vem com `#define USAR_PCA9685 1` (veja a variante no fim do MONTAGEM.md); sem ele, mude para `0`.
 
 ## Pontos para testar antes da versão final
 
