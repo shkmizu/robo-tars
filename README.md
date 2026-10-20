@@ -136,6 +136,8 @@ O projeto original usa um PCA9685 entre o Uno e os servos; o código vem com `#d
 
 ## Outros arquivos
 
+- `versao_final/`: código da apresentação, com IA e Bluetooth (veja `versao_final/README.md`). A versão de teste fica em `arduino/robo_bracos/` e `ia/tars.py`.
+
 - `fusion/RoboDoisBracos/RoboDoisBracos.py`: modelo 3D com juntas no Fusion (opcional, para os desenhos técnicos).
 - `demo/`: demonstração 3D. Para refazer:
   ```bash
