@@ -54,7 +54,18 @@ Sem o notebook, os dois funcionam igual: ao ligar as pilhas, o robô faz a coreo
 3. **Voz em português:** Configurações → Hora e idioma → Fala → Português (Brasil).
 4. **Parear o HC-05:** Configurações → Bluetooth → Adicionar dispositivo → **HC-05**, senha **1234** (ou 0000). Em *Mais configurações de Bluetooth → Portas COM*, anote a porta **"De saída"** (ex.: COM5).
 
-## Usar
+## Pelo cabo USB, sem Bluetooth (o mais simples)
+
+O HC-05 é opcional: pelo cabo USB a IA comanda o robô do mesmo jeito.
+1. Ligue o cabo USB do notebook no Uno (pela janela da tampa traseira). As pilhas continuam no borne verde: elas movem os servos.
+2. Descubra a porta: Arduino IDE → *Ferramentas → Porta*, ou Gerenciador de Dispositivos → *Portas (COM e LPT)* → "USB-SERIAL CH340 (COM3)".
+3. Feche o Monitor Serial e rode, na pasta `versao_final/ia`, trocando COM3 pela sua porta:
+   ```
+   python tars.py --porta COM3 --baud 115200 --teclado
+   python tars.py --porta COM3 --baud 115200
+   ```
+   O `--baud 115200` é obrigatório no cabo. Ao abrir a porta o Uno reinicia; o `tars.py` já espera 2 s por isso.
+
 
 Feche o Monitor Serial do Arduino IDE antes (ele ocupa a porta). Na pasta `versao_final/ia`:
 
