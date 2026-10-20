@@ -66,6 +66,7 @@ O HC-05 é opcional: pelo cabo USB a IA comanda o robô do mesmo jeito.
    ```
    O `--baud 115200` é obrigatório no cabo. Ao abrir a porta o Uno reinicia; o `tars.py` já espera 2 s por isso.
 
+## Usar
 
 Feche o Monitor Serial do Arduino IDE antes (ele ocupa a porta). Na pasta `versao_final/ia`:
 
