@@ -42,7 +42,27 @@ Sem o notebook, os dois funcionam igual: ao ligar as pilhas, o robô faz a coreo
 4. *Placa: Arduino Uno*, porta COM do Uno → **Carregar**.
 5. Monitor Serial (115200, Nova linha) → RESET: deve aparecer `PCA9685 OK` e `Tela OK`.
 
-## Preparar o notebook (Windows)
+## No notebook da apresentação (Windows, baixando do GitHub)
+
+O código está no branch **`claude/relaxed-lamport-gdcxxg`** (ainda não no `main`).
+
+1. **Baixar:** abra https://github.com/shkmizu/robo-tars/archive/refs/heads/claude/relaxed-lamport-gdcxxg.zip (com a conta que tem acesso ao repositório) e descompacte. Ou, no GitHub, troque o branch para `claude/relaxed-lamport-gdcxxg` e use **Code → Download ZIP**.
+2. **Instalar uma vez:**
+   - **Python 3.12** (python.org): na instalação, marque **"Add python.exe to PATH"**.
+   - **Ollama** (ollama.com).
+   - **Voz em português:** Configurações → Hora e idioma → Fala → Português (Brasil).
+3. Na pasta `versao_final/ia`, dê **clique duplo** nos arquivos, nesta ordem:
+
+| Arquivo | O que faz |
+|---|---|
+| `1_instalar.bat` | instala as bibliotecas, baixa o modelo de IA (~2 GB, só na primeira vez) e roda o autoteste |
+| `2_testar_digitando.bat` | conversa digitando, com o robô no USB |
+| `3_diagnostico.bat` | confere IA, voz, microfone, internet e robô |
+| `4_conversar_por_voz.bat` | **apresentação**: conversa por voz |
+
+Os `.bat` acham sozinhos a porta do Uno no USB (`--porta auto`) e já usam `--baud 115200`. Antes de abrir, ligue o cabo USB no Uno, coloque as pilhas e **feche o Arduino IDE** (o Monitor Serial ocupa a porta).
+
+## Preparar o notebook à mão (Windows)
 
 1. **Ollama** (ollama.com) e o modelo: `ollama pull llama3.2:3b`
 2. **Python 3.11 ou 3.12**, e na pasta `versao_final/ia`:
@@ -76,7 +96,7 @@ Feche o Monitor Serial do Arduino IDE antes (ele ocupa a porta). Na pasta `versa
 | Robô pelo Bluetooth, digitando | `python tars.py --porta COM5 --teclado` |
 | Conferir tudo antes de apresentar | `python tars.py --porta COM5 --diagnostico` |
 | **Apresentação, por voz** | `python tars.py --porta COM5` |
-| Plano B: pelo cabo USB | `python tars.py --porta COM3 --baud 115200` (COM3 = porta do cabo) |
+| Pelo cabo USB, achando a porta sozinho | `python tars.py --porta auto --baud 115200` |
 | Sem internet | acrescente `--vosk vosk-model-small-pt-0.3` (modelo em alphacephei.com/vosk/models) |
 
 Na conversa, a tela mostra **OUVINDO… → PENSANDO… → a resposta**, o notebook fala e os braços fazem a ação. "Oi, TARS" sempre acena, "Dança pra gente" sempre dança e "Parabéns" sempre comemora, mesmo se a IA falhar. Diga **"desligar"** para encerrar: o robô volta à coreografia.

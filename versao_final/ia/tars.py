@@ -82,11 +82,30 @@ def decidir(ouvido, historico, modelo=MODELO):
     return fala, acao_por_palavra(ouvido) or acao
 
 
+# Nomes com que o Uno (e os clones com chip CH340) aparece na lista de portas.
+NOMES_ARDUINO = ('arduino', 'ch340', 'ch34', 'usb-serial', 'usb serial', 'wchusbserial', 'usbserial', 'usbmodem')
+
+
+def encontrar_porta():
+    """Acha a porta do Uno ligado pelo cabo USB (para usar --porta auto)."""
+    from serial.tools import list_ports  # pip install pyserial
+    portas = list(list_ports.comports())
+    for p in portas:
+        if any(n in f'{p.device} {p.description} {p.manufacturer}'.lower() for n in NOMES_ARDUINO):
+            return p.device
+    achadas = ', '.join(f'{p.device} ({p.description})' for p in portas) or 'nenhuma'
+    raise SystemExit(f'Não achei o Arduino no USB. Portas encontradas: {achadas}. '
+                     'Confira o cabo e o driver CH340, ou rode com --porta COMx.')
+
+
 class Robo:
     """Manda comandos ao Arduino pelo Bluetooth (HC-05) ou USB. Sem porta: só imprime (modo de teste)."""
 
     def __init__(self, porta=None, baud=9600):
         self.serial, self.pendentes = None, 0
+        if porta == 'auto':
+            porta = encontrar_porta()
+            print(f'Robô encontrado na porta {porta}.')
         if porta:
             import serial  # pip install pyserial
             self.serial = serial.Serial(porta, baud, timeout=0.2)
@@ -290,7 +309,7 @@ def _autoteste():
 
 def main():
     ap = argparse.ArgumentParser(description='TARS: voz + LLM local + robô')
-    ap.add_argument('--porta', help='porta do robô (ex.: COM5); sem ela, só simula')
+    ap.add_argument('--porta', help='porta do robô (ex.: COM5, ou auto para achar o Uno no USB); sem ela, só simula')
     ap.add_argument('--baud', type=int, default=9600, help='9600 no Bluetooth, 115200 no cabo USB')
     ap.add_argument('--modelo', default=MODELO)
     ap.add_argument('--teclado', action='store_true', help='digitar em vez de usar o microfone (o TARS continua falando)')
