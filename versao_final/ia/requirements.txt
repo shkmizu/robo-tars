@@ -1,0 +1,5 @@
+pyserial
+SpeechRecognition
+pyaudio
+pyttsx3
+vosk
