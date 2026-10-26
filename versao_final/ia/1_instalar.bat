@@ -1,13 +1,22 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
-set PY=python
-where py >nul 2>nul && set PY=py -3
+rem O PyAudio (microfone) so tem instalador pronto ate o Python 3.13: usa o 3.12 se existir.
+set PY=
+py -3.12 -c "" >nul 2>nul && set "PY=py -3.12"
+if not defined PY (py -3.11 -c "" >nul 2>nul && set "PY=py -3.11")
+if not defined PY (py -3.13 -c "" >nul 2>nul && set "PY=py -3.13")
+if not defined PY (
+  echo ERRO: instale o Python 3.12 em python.org/downloads/release/python-31210/
+  echo        "Windows installer (64-bit)". Pode manter o Python mais novo instalado junto.
+  pause
+  exit /b 1
+)
 echo === Instalando as bibliotecas do TARS ===
 %PY% -m pip install -r requirements.txt
 if errorlevel 1 (
   echo.
-  echo ERRO: confira se o Python 3.11 ou 3.12 esta instalado e marcado "Add python.exe to PATH".
+  echo ERRO na instalacao das bibliotecas: veja a mensagem acima.
   pause
   exit /b 1
 )

@@ -48,7 +48,7 @@ O código está no branch **`claude/relaxed-lamport-gdcxxg`** (ainda não no `ma
 
 1. **Baixar:** abra https://github.com/shkmizu/robo-tars/archive/refs/heads/claude/relaxed-lamport-gdcxxg.zip (com a conta que tem acesso ao repositório) e descompacte. Ou, no GitHub, troque o branch para `claude/relaxed-lamport-gdcxxg` e use **Code → Download ZIP**.
 2. **Instalar uma vez:**
-   - **Python 3.12** (python.org): na instalação, marque **"Add python.exe to PATH"**.
+   - **Python 3.12** (python.org/downloads/release/python-31210/ → *Windows installer (64-bit)*): na instalação, marque **"Add python.exe to PATH"**. Tem que ser o 3.12 (ou 3.11): no Python mais novo o `pyaudio` (microfone) não instala e pede o "Microsoft Visual C++". Se já tem outro Python, pode deixar: os `.bat` escolhem o 3.12 sozinhos.
    - **Ollama** (ollama.com).
    - **Voz em português:** Configurações → Hora e idioma → Fala → Português (Brasil).
 3. Na pasta `versao_final/ia`, dê **clique duplo** nos arquivos, nesta ordem:
