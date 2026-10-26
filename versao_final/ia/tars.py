@@ -278,6 +278,16 @@ def _tocar_mp3(arquivo):
         subprocess.run(['ffplay', '-nodisp', '-autoexit', '-loglevel', 'quiet', arquivo], check=True)
 
 
+def _com_silencio(mp3, ms=400):
+    """Põe silêncio no começo do mp3 do edge-tts (MPEG-2 camada III, 24 kHz, 48 kbps, mono): a saída de
+    som do notebook "acorda" durante o silêncio e não come o começo da fala. Outro formato: não mexe."""
+    inicio = 10 + int.from_bytes(mp3[6:10], 'big') if mp3[:3] == b'ID3' else 0   # pula a etiqueta ID3
+    if mp3[inicio:inicio + 2] != b'\xff\xf3' or mp3[inicio + 2] & 0xFD != 0x64 or mp3[inicio + 3] >> 6 != 3:
+        return mp3
+    quadro = b'\xff\xf3\x64\xc0' + bytes(140)    # 144 bytes = 24 ms de silêncio
+    return mp3[:inicio] + quadro * (ms // 24) + mp3[inicio:]
+
+
 def voz_neural():
     """Voz neural pt-BR (edge-tts). Precisa de internet; levanta erro se não conseguir."""
     import asyncio, os, tempfile, edge_tts  # pip install edge-tts
@@ -286,6 +296,10 @@ def voz_neural():
     def preparar(texto):
         fala = edge_tts.Communicate(texto, VOZ_TARS, rate=VELOCIDADE, pitch=TOM)
         asyncio.run(fala.save(arquivo))
+        with open(arquivo, 'rb') as f:
+            mp3 = _com_silencio(f.read())
+        with open(arquivo, 'wb') as f:
+            f.write(mp3)
         return lambda: _tocar_mp3(arquivo)
     return preparar
 
@@ -431,6 +445,7 @@ def _autoteste():
     assert comando_especial('Você está brincando?')[1] == 'piada'
     assert comando_especial('Que dia é hoje?') is None
     assert '60' not in _ajustes(PERSONALIDADE) and '95%' in _ajustes(PERSONALIDADE)
+    assert _com_silencio(b'\xff\xfb\x90\x64abc') == b'\xff\xfb\x90\x64abc'   # outro formato de mp3: não mexe
     AJUSTES.update(humor=75, honestidade=90)
     print('autoteste ok')
 
