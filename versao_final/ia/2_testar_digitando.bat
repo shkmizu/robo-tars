@@ -7,8 +7,9 @@ py -3.12 -c "" >nul 2>nul && set "PY=py -3.12"
 if not defined PY (py -3.11 -c "" >nul 2>nul && set "PY=py -3.11")
 if not defined PY (py -3.13 -c "" >nul 2>nul && set "PY=py -3.13")
 if not defined PY (
-  echo ERRO: instale o Python 3.12 em python.org/downloads/release/python-31210/
-  echo        "Windows installer (64-bit)". Pode manter o Python mais novo instalado junto.
+  echo ERRO: falta o Python 3.12. Baixe e instale este arquivo:
+  echo   https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe
+  echo Pode manter o Python mais novo instalado junto.
   pause
   exit /b 1
 )
