@@ -12,3 +12,5 @@ fusion/RoboDoisBracos/saida/
 # Pacote para o técnico (dá para recriar a partir de laser/)
 laser/*.zip
 versao_final/ia/voz.txt
+versao_final/ia/elevenlabs_chave.txt
+versao_final/ia/elevenlabs_chave.txt.txt

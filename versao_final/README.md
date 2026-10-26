@@ -137,4 +137,9 @@ O TARS fala com uma voz neural da Microsoft (`edge-tts`). Ela precisa de interne
 | 5 | `en-US-BrianMultilingualNeural` | masculina, multilíngue, descontraída |
 | 6 | `en-US-AvaMultilingualNeural` | feminina, multilíngue |
 
+| 7 | ElevenLabs **Brian** | masculina, multilíngue (funciona no plano grátis) |
+| 8–11 | ElevenLabs **Talis**, **Fabio Oliveira**, **Thiago Morais**, **Sávio** | brasileiras (vozes da biblioteca: pela API pedem plano pago, a partir do Starter) |
+
+**ElevenLabs:** crie a conta em elevenlabs.io → *Developers* → *API Keys* → crie uma chave com permissão de *Text to Speech*. Na primeira vez que escolher uma voz [ElevenLabs] no `5_escolher_voz.bat`, ele pede a chave e guarda em `ia/elevenlabs_chave.txt` (fora do GitHub). O plano grátis dá ~10 mil caracteres por mês (umas 100 respostas do TARS). Se a ElevenLabs falhar (internet, créditos, plano), o TARS passa sozinho para a voz da Microsoft. `ELEVEN_MODELO` no topo de `ia/tars.py`: `eleven_multilingual_v2` (mais natural) ou `eleven_flash_v2_5` (mais rápido).
+
 `TOM` e `VELOCIDADE` no topo de `ia/tars.py` mudam o tom e o ritmo (ex.: `-10Hz`, `-5%`), mas qualquer mudança deixa a voz menos natural.
