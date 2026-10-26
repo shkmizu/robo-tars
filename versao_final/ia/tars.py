@@ -42,9 +42,9 @@ VOZES = [   # (nome no edge-tts, descrição) para o --escolher-voz
     ('elevenlabs:blPx0tvsvee8CuFd63lX', '[ElevenLabs] Sávio, brasileira, calma e pausada'),
 ]
 ELEVEN_MODELO = 'eleven_flash_v2_5'   # o mais rápido; 'eleven_multilingual_v2' é mais natural, mas demora mais
-# Risada depois das piadas: o modelo v3 da ElevenLabs entende "[laughs]" e ri de verdade. As outras
-# vozes não sabem rir e pulam a etiqueta. Para desligar: RISADA = ''
-RISADA = ' [laughs]'
+# Risada depois das piadas, junto com o gesto "piada": o modelo v3 da ElevenLabs entende "[laughs]"
+# e ri de verdade. É gerada uma vez só por conversa. Só nas vozes [ElevenLabs]; para desligar: RISADA = ''
+RISADA = '[laughs] Ha ha ha!'
 RISADA_MODELO = 'eleven_v3'
 ARQUIVO_CHAVE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'elevenlabs_chave.txt')
 ARQUIVO_VOZ = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'voz.txt')
@@ -400,7 +400,6 @@ def voz_elevenlabs(voice_id):
     chave = chave_elevenlabs()
     if not chave:
         raise RuntimeError('falta a chave da ElevenLabs (rode o 5_escolher_voz.bat e escolha uma voz [ElevenLabs])')
-    arquivo = os.path.join(tempfile.gettempdir(), 'tars_fala.wav')
     url = f'https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream?output_format=pcm_24000'
     saida = acordar_som()
 
@@ -413,15 +412,28 @@ def voz_elevenlabs(voice_id):
         except urllib.error.HTTPError as erro:   # mostra o motivo: chave errada, créditos, plano...
             raise RuntimeError(f'ElevenLabs {erro.code}: {erro.read().decode("utf-8", "ignore")[:200]}') from None
 
+    risada = []   # o áudio da risada, guardado depois da primeira vez (economiza créditos e tempo)
+
+    def tocar_pcm(pcm, nome_arquivo):
+        if saida:
+            return lambda: saida.tocar([pcm])
+        caminho = os.path.join(tempfile.gettempdir(), nome_arquivo)
+        with wave.open(caminho, 'wb') as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(24000)
+            w.writeframes(bytes(2 * 24000 * 4 // 10) + pcm)   # 0,4 s de silêncio: a saída de som "acorda"
+        return lambda: _tocar(caminho)
+
+    def preparar_risada():
+        if not risada:
+            r, primeiro = pedir(RISADA, RISADA_MODELO)
+            with r:
+                risada.append(primeiro + r.read())
+        return tocar_pcm(risada[0], 'tars_risada.wav')
+
     def preparar(texto):
-        r = None
-        if '[' in texto:   # risada e outras etiquetas: só o modelo v3 entende
-            try:
-                r, primeiro = pedir(texto, RISADA_MODELO)
-            except Exception as erro:
-                print(f'(risada indisponível: {erro})')
-        if r is None:
-            r, primeiro = pedir(sem_etiquetas(texto), ELEVEN_MODELO)
+        r, primeiro = pedir(sem_etiquetas(texto), ELEVEN_MODELO)
         if saida:
             def pedacos():
                 yield primeiro
@@ -437,13 +449,9 @@ def voz_elevenlabs(voice_id):
                         yield pedaco
             return lambda: saida.tocar(pedacos())
         with r:
-            pcm = primeiro + r.read()
-        with wave.open(arquivo, 'wb') as w:
-            w.setnchannels(1)
-            w.setsampwidth(2)
-            w.setframerate(24000)
-            w.writeframes(bytes(2 * 24000 * 4 // 10) + pcm)   # 0,4 s de silêncio: a saída de som "acorda"
-        return lambda: _tocar(arquivo)
+            return tocar_pcm(primeiro + r.read(), 'tars_fala.wav')
+    if RISADA:
+        preparar.risada = preparar_risada
     return preparar
 
 
@@ -524,6 +532,15 @@ def voz(offline=False):
                     raise
                 print(f'(voz falhou: {erro}; usando a próxima voz daqui em diante)')
                 atual.clear()
+
+    def preparar_risada():
+        """tocar() da risada, ou uma função que não faz nada se esta voz não sabe rir."""
+        try:
+            return getattr(atual[0], 'risada', lambda: lambda: None)() if atual else (lambda: None)
+        except Exception as erro:
+            print(f'(risada indisponível: {erro})')
+            return lambda: None
+    preparar.risada = preparar_risada
     proximo()
     return preparar
 
@@ -738,10 +755,18 @@ def conversar(robo, a):
                 print(f'Ollama: {erro} — abra o Ollama e confira o modelo com "ollama list"')
                 fala, acao = 'Perdi a conexão com o meu cérebro.', acao_por_palavra(ouvido) or 'triste'
         print(f'TARS: {fala}  [{acao}]')
-        tocar = preparar(fala + RISADA if acao == 'piada' else fala)   # gera o áudio antes: braços e voz juntos
+        tocar = preparar(fala)   # gera o áudio antes: braços e voz começam juntos
+        if acao == 'piada':
+            rir = getattr(preparar, 'risada', lambda: lambda: None)()
         robo.texto(tela or fala)
-        robo.acao(acao)
-        tocar()
+        if acao == 'piada':   # conta a piada parado; no fim, ri junto com o gesto e a "luz de piada"
+            robo.acao('repouso')
+            tocar()
+            robo.acao('piada')
+            rir()
+        else:
+            robo.acao(acao)
+            tocar()
 
 
 if __name__ == '__main__':
