@@ -16,7 +16,7 @@ A versão de teste continua em `arduino/robo_bracos/` e `ia/tars.py`, sem mudan�
 |---|---|---|
 | Coreografia enquanto a IA ouve | volta sozinha depois de 30 s sem comando | fica **desligada** durante a conversa (comando `m 0`) |
 | Ao sair do `tars.py` ("desligar" ou Ctrl+C) | nada muda | o robô **volta à coreografia** (`m 1`) |
-| Novo comando | — | `m 0` / `m 1`: modo autônomo desligado / ligado |
+| Novo comando | — | `m 0` / `m 1`: modo autônomo desligado / ligado; ações novas `andar`, `roda`, `piada`, `duvida`, `susto` |
 
 Sem o notebook, os dois funcionam igual: ao ligar as pilhas, o robô faz a coreografia sozinho.
 
@@ -102,6 +102,25 @@ Feche o Monitor Serial do Arduino IDE antes (ele ocupa a porta). Na pasta `versa
 Na conversa, a tela mostra **OUVINDO… → PENSANDO… → a resposta**, o notebook fala e os braços fazem a ação. "Oi, TARS" sempre acena, "Dança pra gente" sempre dança e "Parabéns" sempre comemora, mesmo se a IA falhar. Diga **"desligar"** para encerrar: o robô volta à coreografia.
 
 Para mudar o jeito do TARS falar, edite `PERSONALIDADE` no topo de `ia/tars.py`.
+
+## Gestos e falas do filme
+
+| Diga | O TARS faz |
+|---|---|
+| "Caminhe" / "Anda" | **andar**: balança os blocos como no filme |
+| "Rola" / "Modo roda" | **roda**: os blocos giram juntos |
+| "Conta uma piada" | **piada**: a tela pisca (a "luz de piada") |
+| "Ajuste o humor para 60%" | muda o humor da IA e mostra `HUMOR 60%` na tela |
+| "Honestidade 100 por cento" | muda a honestidade da IA |
+| "Qual o seu nível de humor?" | informa o ajuste atual |
+| "Quem é você?" / "Se apresente" | apresentação do TARS |
+| "Você está brincando?" | fala da luz de piada |
+| "Isso não é possível" | "Não. É necessário." |
+| "Posso confiar em você?" | fala da honestidade |
+
+As falas do filme e os ajustes respondem na hora, sem esperar a IA. Para criar outras, edite a lista `FILME` em `ia/tars.py`. A IA também pode escolher sozinha os gestos novos (`duvida`, `susto`, …).
+
+O `tars.py` gera o áudio antes de mandar o gesto, então os braços e a voz começam juntos.
 
 ## Voz do TARS
 
