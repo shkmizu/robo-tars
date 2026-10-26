@@ -1,13 +1,91 @@
-# Robô TARS: MDF 3 mm, corte a laser, micro servos SG90
+# Robô TARS
 
-Robô inspirado no TARS (*Interestelar*): 4 blocos verticais lado a lado.
-- **Corpo:** os 2 blocos do meio, uma caixa só com um vinco gravado. Guarda toda a eletrônica e toda a fiação.
-- **Braços:** os 2 blocos de fora. Cada um gira em torno de um eixo **no meio da sua altura**, movido por um SG90.
-- **Tela:** um OLED 0,96" na frente.
+Robô de mesa inspirado no TARS, de *Interestelar*. São 4 blocos de MDF lado a lado, como no filme: os 2 do meio formam o corpo e os 2 de fora são os braços, cada um movido por um micro servo. Uma tela OLED na frente mostra o que ele está pensando e falando.
 
-Demonstração 3D interativa: https://claude.ai/artifact/CNWZmAH6V9aymZm9zFhAPm (privada; compartilhe pelo menu Share).
+O TARS conversa por voz:
+1. Você fala com ele.
+2. O notebook entende a frase e uma IA que roda no próprio notebook escolhe a resposta.
+3. O notebook fala a resposta com uma voz natural.
+4. Ao mesmo tempo, o robô mexe os braços e escreve a resposta na tela.
 
-## Para o técnico do laser → pasta `laser/`
+Ligado só nas pilhas, sem notebook, ele faz uma coreografia sozinho.
+
+**Estado atual:** o robô está montado dentro do corpo e funciona com o cabo USB ligado ao notebook. Já funcionam a conversa por voz, os 13 gestos, a voz da ElevenLabs, a risada nas piadas e o modo autônomo nas pilhas. Faltam ajustes físicos: firmar a junção braço–servo e calibrar os servos (`us0`/`us90`).
+
+- **Para apresentar:** [APRESENTACAO.md](APRESENTACAO.md) (texto e roteiro) e [CP5.md](CP5.md) (critérios, plano B e checklist do dia).
+- **Para ligar e usar:** [versao_final/README.md](versao_final/README.md).
+- **Para montar:** [MONTAGEM.md](MONTAGEM.md).
+
+## Como funciona
+
+```
+  você fala ──► microfone do notebook
+                    │
+                    ▼
+        reconhecimento de voz (Google; ou Vosk, sem internet)
+                    │  "Oi, TARS, conta uma piada"
+                    ▼
+        falas do filme e palavras-chave ──► resposta na hora
+                    │  (o resto)
+                    ▼
+        IA local no Ollama (llama3.2:3b) ──► {"fala": "...", "acao": "piada"}
+                    │
+          ┌─────────┴──────────────────────────────┐
+          ▼                                        ▼
+  voz do TARS (ElevenLabs;              cabo USB ──► Arduino Uno
+  reserva: Microsoft e Windows)                      ├─► PCA9685 ──► 2 × SG90 (braços)
+          │                                          └─► OLED (OUVINDO… / PENSANDO… / resposta)
+          ▼
+  alto-falante do notebook
+```
+
+A voz é gerada **antes** de o gesto ser enviado, para os braços e a fala começarem juntos. Nas piadas, o TARS conta a piada parado e, no fim, ri: a tela pisca (a "luz de piada" do filme) e os braços balançam.
+
+## O que tem no repositório
+
+| Pasta / arquivo | O que é |
+|---|---|
+| [`versao_final/`](versao_final/README.md) | **código da apresentação**: `arduino/tars_ia/tars_ia.ino` (Arduino) e `ia/tars.py` com os `.bat` de clique duplo (notebook, Windows) |
+| [`APRESENTACAO.md`](APRESENTACAO.md) | texto para explicar o projeto, dividido por apresentador |
+| [`CP5.md`](CP5.md) | critérios da avaliação, roteiro de 10 min, frases da demonstração, plano B |
+| [`MONTAGEM.md`](MONTAGEM.md) | montagem passo a passo, do teste de cada peça ao robô fechado |
+| [`FUSION.md`](FUSION.md) | guia de modelagem no Fusion 360 |
+| `fusion/RoboDoisBracos/` | `projeto.py` (todas as medidas e verificações do projeto) e o modelo 3D com juntas no Fusion |
+| `laser/` | arquivos de corte (DXF) para o técnico do laser |
+| `arduino/robo_bracos/` e `ia/` | versão de teste usada na bancada (servos direto no Uno ou no PCA9685) |
+| `arduino/tinkercad/` | versão para simular no Tinkercad ([TINKERCAD.md](arduino/tinkercad/TINKERCAD.md)) |
+| `demo/` | demonstração 3D interativa (`python demo/gerar_demo.py`) |
+
+## Hardware
+
+| Componente | Função |
+|---|---|
+| Arduino Uno (clone com chip CH340) | recebe os comandos pelo USB e controla o resto |
+| PCA9685 (endereço I²C 0x40) | gera o sinal dos servos e distribui a energia das pilhas para eles |
+| 2 × micro servo SG90 | um em cada braço, de −90° a +90° |
+| OLED 0,96" SSD1306 (I²C 0x3C) | mostra o estado, as respostas e a "luz de piada" |
+| 4 pilhas AA alcalinas (6 V) no suporte | movem os servos e alimentam o Uno pelo Vin |
+| Notebook Windows | microfone, IA (Ollama), voz e alto-falante |
+| Corpo em MDF 3 mm, corte a laser | 37 peças, 303 × 150 × 84 mm, cerca de 690 g |
+
+### Ligações (montagem atual)
+
+| De | Para |
+|---|---|
+| Uno **A4 / A5 / 5V / GND** | PCA9685 **SDA / SCL / VCC / GND** |
+| Uno **SDA / SCL** (ao lado do AREF), **3.3V**, **GND** | OLED **SDA / SCK / VDD / GND** |
+| Servo do braço direito / esquerdo | PCA9685 **canal 0 / 1** (fio marrom na fileira GND) |
+| Pilhas **+ / −** | **borne verde V+ / GND** do PCA9685 (se os servos não mexem, confira a polaridade) |
+| Borne **V+** | Uno **Vin** (jumper) |
+| Cabo USB do notebook | USB do Uno (janela da tampa traseira) |
+
+❌ Nunca ligue as pilhas no pino **5V** do Uno. O HC-05 (Bluetooth) é opcional: o projeto usa o cabo USB. As ligações do HC-05 estão em [versao_final/README.md](versao_final/README.md#bluetooth-opcional).
+
+## Projeto mecânico
+
+Demonstração 3D interativa: https://claude.ai/artifact/CNWZmAH6V9aymZm9zFhAPm (privada; compartilhe pelo menu Share). Encaixe do braço em 3D: https://claude.ai/artifact/54J58Fm5kRra3gw5K6yQXq.
+
+### Para o técnico do laser → pasta `laser/`
 
 | Arquivo | Uso |
 |---|---|
@@ -22,9 +100,7 @@ python laser/exportar_laser.py
 ```
 O exportador **se recusa a gerar o arquivo** se alguma verificação de projeto falhar.
 
----
-
-## Medidas dos componentes (de onde vieram)
+### Medidas dos componentes (de onde vieram)
 
 | Componente | Medidas usadas | Fonte |
 |---|---|---|
@@ -37,7 +113,7 @@ O exportador **se recusa a gerar o arquivo** se alguma verificação de projeto 
 
 > Os SG90 de fabricantes diferentes variam alguns décimos de milímetro. A janela tem 0,2 mm de folga por lado. Quando os servos chegarem, **confira o SG90 com paquímetro** antes de cortar, principalmente o comprimento do corpo (22,7 mm).
 
-## Arquitetura
+### Arquitetura
 
 | Item | Valor |
 |---|---|
@@ -66,7 +142,7 @@ O exportador **se recusa a gerar o arquivo** se alguma verificação de projeto 
 
 Os parafusos entram em reforços colados por dentro, com rasgo-T e porca.
 
-## Verificações (`python fusion/RoboDoisBracos/projeto.py`)
+### Verificações (`python fusion/RoboDoisBracos/projeto.py`)
 
 ```
 OK  Ponte de MDF entre a janela do SG90 e o pré-furo da aba: 2.0 mm (mín. 2.0)
@@ -89,58 +165,19 @@ OK  Todas as peças cabem na chapa 900×600
 ```
 **Como os cabos são verificados:** o comprimento é estimado pelo caminho em "L" entre os conectores, mais 20%, mais 30 mm de sobra. Foi assim que apareceu que o **jumper de 20 cm não chega ao OLED**, e por isso a lista pede jumpers de 30 cm.
 
-## Ligações
-
-Todo o I²C é compartilhado: o PCA9685 fica no endereço 0x40 e o OLED no 0x3C.
-
-| De | Para | Cabo |
-|---|---|---|
-| Uno A4 / A5 / 5V / GND | PCA9685 SDA / SCL / VCC / GND (conector de baixo) | 4 jumpers macho-fêmea de 20 cm |
-| PCA9685 SDA / SCL / VCC / GND (conector de cima) | OLED SDA / SCL / VCC / GND | 4 jumpers fêmea-fêmea de 30 cm |
-| *ou, sem soldar o 2º conector do PCA9685:* Uno SDA / SCL (ao lado do AREF), 3.3V, GND | OLED SDA / SCL / VCC / GND | 4 jumpers macho-fêmea de 30 cm |
-| SG90 do braço D (+X) | PCA9685 canal 0 | cabo do servo (250 mm) |
-| SG90 do braço E (−X) | PCA9685 canal 1 | cabo do servo (250 mm) |
-| Bateria: 4 pilhas AA **alcalinas** no suporte (6 V), dentro do corpo | chave → borne V+/GND do PCA9685 e pino **Vin**/GND do Uno | jumpers |
-| Capacitor de 470 µF | borne V+/GND do PCA9685 (respeitar a polaridade) | — |
-| USB do Uno | janela na tampa traseira | cabo USB (alimenta o Uno) |
-
-**Sem PCA9685** (`#define USAR_PCA9685 0` no `robo_bracos.ino`; o padrão do repositório é `1`, com PCA9685): o sinal do servo do braço D vai no **D9** e o do braço E no **D6**; os fios vermelhos no **5V** do Uno e os marrons no **GND**. A bateria entra só no **Vin/GND** do Uno. O OLED continua no SDA/SCL. Com o PCA9685, deixe `1`.
-
-**Onde fica cada componente:**
-- **Uno:** deitado no fundo, com o USB voltado para a janela traseira.
-- **PCA9685:** em pé na lateral E, metade da frente. O borne fica voltado para trás, acessível pela tampa.
-- **OLED:** colado atrás da janela da frente.
-
-Os pinos do OLED e os conectores saem cerca de 23 mm para trás e não alcançam o servo.
-
 ## Montagem
 
-Guia completo, passo a passo e com checklist: [MONTAGEM.md](MONTAGEM.md). Roteiro de bancada para o celular: https://claude.ai/artifact/LCUTgscz8zunP4qHRRn4NE (privado; compartilhe pelo menu Share). Resumo:
+O guia completo, com checklist, está em [MONTAGEM.md](MONTAGEM.md). O roteiro de bancada para o celular está em https://claude.ai/artifact/LCUTgscz8zunP4qHRRn4NE. Resumo da ordem que deu certo:
 
-1. **Cada componente sozinho**, na mesa, só com o USB: Uno, servo direito (D9), servo esquerdo (D6), OLED (A4/A5) e pilhas no multímetro. Centralize os servos com `u 0 1500` e `u 1 1500`.
+1. **Cada componente sozinho**, na mesa, só com o USB: Uno, cada servo, OLED.
 2. **Teste de encaixe** de cada componente no corpo, sem ligar.
-3. **Ensaio geral** fora do robô: tudo ligado, pilhas na mini protoboard (trilha + nos servos e no Vin), 5 minutos de coreografia.
-4. **Montagem no corpo**, de baixo para cima: Uno, mini protoboard, servos, OLED, pilhas na tampa traseira; jumpers presos com cola quente.
-5. **Braços**: horn no anteparo, braço em pé no eixo centralizado, vela no mancal.
-6. **Calibrar** com `u <canal> <us>` e anotar `us0`/`us90` no sketch.
+3. **Ensaio geral** fora do robô, com as pilhas: coreografia por alguns minutos.
+4. **Montagem no corpo**: Uno deitado no fundo, PCA9685 em pé na lateral, OLED atrás da janela da frente, pilhas acessíveis pela tampa traseira.
+5. **Braços**: com o servo centralizado (`a repouso`), encaixe o braço em pé.
+6. **Calibrar** com `u <canal> <us>` e anotar `us0`/`us90` na tabela `juntas[]` do `tars_ia.ino`.
 
-O projeto original usa um PCA9685 entre o Uno e os servos; o código vem com `#define USAR_PCA9685 1` (veja a variante no fim do MONTAGEM.md); sem ele, mude para `0`.
+## Pendências
 
-## Pontos para testar antes da versão final
-
-- [ ] **Encaixes:** pente de teste → kerf. Monte um canto de caixa avulso.
-- [ ] **SG90 real:** medir o corpo; deve passar justo na janela. Os parafusos devem entrar firmes nos pré-furos de Ø1,4.
-- [ ] **Mancal:** com vela, o braço deve girar à mão sem prender e sem folga visível.
-- [ ] **Equilíbrio:** sem energia, o braço solto em qualquer ângulo deve ficar parado ou mexer pouco.
-- [ ] **Cabos:** o jumper de 30 cm deve alcançar o OLED sem ficar esticado.
-
-## Outros arquivos
-
-- `versao_final/`: código da apresentação, com IA e Bluetooth (veja `versao_final/README.md`). A versão de teste fica em `arduino/robo_bracos/` e `ia/tars.py`.
-
-- `fusion/RoboDoisBracos/RoboDoisBracos.py`: modelo 3D com juntas no Fusion (opcional, para os desenhos técnicos).
-- `demo/`: demonstração 3D. Para refazer:
-  ```bash
-  python demo/gerar_demo.py
-  ```
-- `arduino/robo_bracos/robo_bracos.ino`: 2 servos + OLED + HC-05. Ao ligar, entra no **modo autônomo**: repete sozinho a `coreografia()` (9 cenas, fáceis de editar), sem notebook nem celular. Qualquer comando pausa a coreografia por 30 s; `d` liga/desliga.
+- [ ] **Braço com folga:** prender o horn no eixo com o parafuso pequeno do SG90 e o braço no horn. Se faltarem os discos do mancal, usar um anel de papelão ou EVA entre o braço e o corpo (veja [MONTAGEM.md](MONTAGEM.md#problemas-comuns)).
+- [ ] **Calibração** dos dois servos (`us0` / `us90`).
+- [ ] **Ensaio da apresentação** na sala, com `3_diagnostico.bat` sem nenhuma FALHA.

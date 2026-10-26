@@ -10,6 +10,8 @@ A ordem importa:
 
 Se algo falhar, você sabe exatamente o quê. Depois de fechar o corpo, fica difícil mexer.
 
+> **Estado atual do projeto:** o robô foi montado **com o PCA9685** e conversa com a IA pelo **cabo USB**. As ligações finais e o programa da apresentação estão em [versao_final/README.md](versao_final/README.md). Este guia continua valendo para as fases de teste e montagem.
+
 Este guia usa os **servos ligados direto no Uno**, sem o PCA9685: no topo do código, deixe `#define USAR_PCA9685 0`. O código no repositório vem com `1` (com PCA9685); para montar assim, veja [Variante com PCA9685](#variante-com-pca9685) no fim.
 
 - Mapa das peças na chapa: https://claude.ai/artifact/1jdB73SS3mzryoovjYr6sd
@@ -250,78 +252,21 @@ Para cada braço:
 
 ---
 
-## Fase 10: Bluetooth e comando de voz (opcional, cerca de 1 h)
+## Fase 10: IA e comando de voz (cerca de 1 h)
 
-Como funciona: o **notebook** ouve a voz, pergunta à IA (LLM local no **Ollama**), fala a resposta em voz alta e manda uma ação para o robô pelo **Bluetooth**. O robô mexe os braços e mostra o texto na tela. O código do Arduino já escuta o HC-05; não é preciso mudar nada nele.
+O **notebook** ouve a voz, pergunta à IA (LLM local no **Ollama**), fala a resposta com a voz do TARS e manda o gesto para o robô pelo **cabo USB**. O robô mexe os braços e mostra o texto na tela.
 
 ```
-voz → notebook (reconhecimento) → Ollama (IA) → resposta falada
-                                               └→ Bluetooth → HC-05 → Arduino → braços + tela
+voz → notebook (reconhecimento) → Ollama (IA) → resposta falada (ElevenLabs)
+                                               └→ cabo USB → Arduino → braços + tela
 ```
 
-### Ligar o HC-05
-| HC-05 | Uno |
-|---|---|
-| **VCC** | **5V** (livre, porque os servos estão na trilha das pilhas) |
-| **GND** | **GND** ao lado do pino 13 |
-| **TXD** | **D10** |
-| **RXD** | **D11 → resistor 1 kΩ → RXD**, e do RXD um **resistor 2 kΩ → GND** (divisor: protege o HC-05, que é de 3,3 V) |
+Tudo está em [versao_final/README.md](versao_final/README.md). Em resumo:
+1. Carregue `versao_final/arduino/tars_ia/tars_ia.ino` no Uno, com os seus `us0`/`us90`, e **feche o Arduino IDE**.
+2. No notebook (Windows), instale o **Python 3.12** e o **Ollama**.
+3. Na pasta `versao_final/ia`, dê clique duplo em `1_instalar.bat` → `5_escolher_voz.bat` → `2_testar_digitando.bat` → `3_diagnostico.bat` → `4_conversar_por_voz.bat`.
 
-Cole o HC-05 com fita dupla-face na face de dentro da lateral direita, abaixo do servo.
-
-### Instalar no notebook
-1. **Ollama:** instale pelo site ollama.com e baixe o modelo (uma vez só, cerca de 2 GB):
-   ```bash
-   ollama pull llama3.2:3b
-   ```
-   Se o notebook for lento, use `llama3.2:1b`. Se o CP4 usa outro modelo, troque `MODELO` no topo de `ia/tars.py`.
-2. **Bibliotecas Python** (use Python 3.11 ou 3.12), a partir da pasta do projeto:
-   ```bash
-   pip install -r ia/requirements.txt
-   ```
-   São elas: `pyserial` (Bluetooth), `SpeechRecognition` e `pyaudio` (microfone), `pyttsx3` (voz).
-3. Confira se está tudo certo, sem robô e sem microfone. Deve aparecer `autoteste ok`:
-   ```bash
-   python ia/tars.py --teste
-   ```
-
-### Parear o Bluetooth
-1. Ligue o robô. O LED do HC-05 pisca **rápido**: ele está esperando conexão.
-2. No Windows: **Configurações → Bluetooth e dispositivos → Adicionar dispositivo → Bluetooth → HC-05**. Senha: **1234** (alguns usam **0000**).
-3. Descubra a porta: **Mais configurações de Bluetooth → aba Portas COM**. Anote a porta marcada como **"De saída"** (ex.: **COM5**). É ela que o programa usa.
-
-### Testar em etapas
-Só passe para a próxima etapa quando a anterior funcionar:
-
-1. **IA sem robô**, digitando. Mostra a resposta e o comando que seria enviado:
-   ```bash
-   python ia/tars.py --sem-robo --teclado
-   ```
-2. **Robô pelo Bluetooth**, digitando. Troque COM5 pela sua porta. Digite "Oi, TARS": o robô deve acenar e mostrar a resposta na tela. O LED do HC-05 passa a piscar **devagar** (conectado):
-   ```bash
-   python ia/tars.py --porta COM5 --teclado
-   ```
-3. **Diagnóstico completo.** Mostra OK ou FALHA para cada item (Ollama, IA, voz em português, microfone, internet, Bluetooth, robô):
-   ```bash
-   python ia/tars.py --porta COM5 --diagnostico
-   ```
-4. **Tudo com voz:**
-   ```bash
-   python ia/tars.py --porta COM5
-   ```
-   Fale perto do microfone. A tela mostra **OUVINDO… → PENSANDO… → a resposta**, o notebook fala e os braços fazem a ação. Diga **"desligar"** para encerrar.
-
-### Frases que disparam ações
-| Diga | O robô faz |
-|---|---|
-| "Oi, TARS" / "Bom dia" / "Tchau" | acena (**sempre**, mesmo se a IA falhar) |
-| "Dança pra gente" | passada alternada (**sempre**) |
-| "Parabéns" / "Mandou bem" | comemora (**sempre**) |
-| Qualquer outra pergunta | a IA responde e escolhe: sim, não, feliz, triste ou repouso |
-
-Para mudar o jeito do TARS falar, edite o texto `PERSONALIDADE` em `ia/tars.py`. Para usar o script de voz do CP4 no lugar do `tars.py`, veja [CP5.md](CP5.md).
-
-> **Reconhecimento de voz:** o `tars.py` usa o do Google, que **precisa de internet**. Para funcionar sem internet, baixe o modelo **vosk-model-small-pt-0.3** (alphacephei.com/vosk/models), descompacte em `ia/` e rode com `--vosk ia/vosk-model-small-pt-0.3`.
+O Bluetooth (HC-05) é opcional; as ligações dele estão no mesmo README.
 
 ---
 
@@ -387,4 +332,5 @@ O projeto original usa um driver **PCA9685** entre o Uno e os servos. Ele só va
 - [ ] Ligações refeitas dentro do corpo, jumpers presos com cola quente, testadas antes de fechar
 - [ ] Braços montados, giram livres à mão; tampas fechadas
 - [ ] Servos calibrados (`us0` / `us90`) e coreografia pronta
-- [ ] (Opcional) HC-05 ligado com o divisor de tensão, pareado, `tars.py` respondendo
+- [ ] `tars_ia.ino` carregado e `3_diagnostico.bat` sem nenhuma FALHA
+- [ ] Conversa por voz funcionando (`4_conversar_por_voz.bat`)

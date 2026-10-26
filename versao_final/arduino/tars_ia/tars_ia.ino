@@ -1,7 +1,8 @@
-// tars_ia.ino — TARS, versão final: 2 braços (SG90 no PCA9685) + tela OLED + Bluetooth HC-05,
-// para conversar com a IA do notebook (versao_final/ia/tars.py). A versão de teste continua em
-// arduino/robo_bracos/. A diferença: o comando "m" liga/desliga o modo autônomo de forma explícita,
-// e o tars.py usa isso para os braços ficarem quietos enquanto o microfone ouve.
+// tars_ia.ino — TARS, versão final: 2 braços (SG90 no PCA9685) + tela OLED, para conversar com
+// a IA do notebook (versao_final/ia/tars.py) pelo cabo USB (ou pelo Bluetooth HC-05, opcional).
+// A versão de teste continua em arduino/robo_bracos/. A diferença: o comando "m" liga/desliga o
+// modo autônomo de forma explícita, e o tars.py usa isso para os braços ficarem quietos enquanto
+// o microfone ouve.
 // Bibliotecas (Gerenciador de Bibliotecas da IDE): "Adafruit PWM Servo Driver Library",
 // "Adafruit SSD1306" e "Adafruit GFX Library". Servo e SoftwareSerial já vêm com a IDE.
 //
@@ -15,7 +16,8 @@
 //     (D11 →1 kΩ→ RX →2 kΩ→ GND): o RX do HC-05 é de 3,3 V.
 //
 // Comandos (uma linha cada, terminada em Enter), pelo USB (115200) ou pelo Bluetooth (9600):
-//   a <ação>           saudar, dancar, feliz, triste, sim, nao, pensar, repouso
+//   a <ação>           saudar, dancar, feliz, triste, sim, nao, pensar, repouso,
+//                      andar, roda, piada (a tela pisca), duvida, susto
 //   t <texto>          escreve na tela (sem acentos)
 //   m <0|1>            modo autônomo: 0 = parado (conversa com a IA), 1 = coreografia
 //   u <canal> <us>     pulso bruto, para calibrar   (ex.: "u 0 1500")

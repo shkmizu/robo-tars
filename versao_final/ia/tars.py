@@ -3,13 +3,15 @@ tars.py — o "cérebro" do robô TARS: ouve, pensa (LLM local no Ollama), fala 
 Versão final: use com versao_final/arduino/tars_ia. Ao começar, desliga a coreografia do robô
 (comando "m 0") para os braços não fazerem barulho perto do microfone; ao sair, religa ("m 1").
 
-Uso:
-  python tars.py --porta COM5 --diagnostico   confere tudo antes de apresentar
-  python tars.py --porta COM5                 robô pelo Bluetooth (a porta "de saída" do HC-05)
-  python tars.py --porta COM5 --vosk modelo   reconhecimento de voz offline (sem internet)
-  python tars.py --porta COM5 --teclado       digitando em vez de usar o microfone (o TARS ainda fala)
-  python tars.py --sem-robo --teclado         sem robô: mostra os comandos que seriam enviados
-  python tars.py --teste                      autoteste (não precisa de microfone, Ollama nem robô)
+Uso (no Windows, os .bat desta pasta já rodam estes comandos):
+  python tars.py --porta auto --baud 115200 --teclado       robô no cabo USB, digitando (o TARS ainda fala)
+  python tars.py --porta auto --baud 115200 --diagnostico   confere tudo antes de apresentar
+  python tars.py --porta auto --baud 115200                 conversa por voz (apresentação)
+  python tars.py --escolher-voz                             ouvir e escolher a voz do TARS
+  python tars.py --porta COM5                               robô pelo Bluetooth (a porta "de saída" do HC-05)
+  python tars.py --sem-robo --teclado                       sem robô: mostra os comandos que seriam enviados
+  python tars.py --teste                                    autoteste (não precisa de microfone, Ollama nem robô)
+  Sem internet: --vosk <pasta do modelo> (reconhecimento offline) e --voz-offline (voz do Windows).
 
 Para usar dentro do script do CP4:
   from tars import Robo, decidir
