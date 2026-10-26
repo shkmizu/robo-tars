@@ -41,7 +41,7 @@ VOZES = [   # (nome no edge-tts, descrição) para o --escolher-voz
     ('elevenlabs:dIwbXBNI0A6EpdIWTvvr', '[ElevenLabs] Thiago Morais, brasileira'),
     ('elevenlabs:blPx0tvsvee8CuFd63lX', '[ElevenLabs] Sávio, brasileira, calma e pausada'),
 ]
-ELEVEN_MODELO = 'eleven_multilingual_v2'   # o mais natural; 'eleven_flash_v2_5' responde mais rápido
+ELEVEN_MODELO = 'eleven_flash_v2_5'   # o mais rápido; 'eleven_multilingual_v2' é mais natural, mas demora mais
 ARQUIVO_CHAVE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'elevenlabs_chave.txt')
 ARQUIVO_VOZ = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'voz.txt')
 ACOES = ('saudar', 'dancar', 'feliz', 'triste', 'sim', 'nao', 'pensar', 'repouso',
@@ -282,6 +282,58 @@ def _voz_portugues(motor):
     return None
 
 
+class SaidaDeSom:
+    """Deixa a saída de som sempre aberta, tocando silêncio enquanto o TARS está calado. Sem isso, o
+    Windows "desliga" a placa de som entre uma fala e outra e come o começo da frase seguinte."""
+    TAXA = 24000   # a mesma do áudio da ElevenLabs (pcm_24000)
+
+    def __init__(self):
+        import pyaudio, queue, threading  # pip install pyaudio (o mesmo do microfone)
+        self._queue, self._threading = queue, threading
+        self.stream = pyaudio.PyAudio().open(format=pyaudio.paInt16, channels=1, rate=self.TAXA,
+                                             output=True, frames_per_buffer=self.TAXA // 50)
+        self.fila = queue.Queue()
+        threading.Thread(target=self._rodar, daemon=True).start()
+
+    def _rodar(self):
+        silencio = bytes(2 * self.TAXA // 50)   # 20 ms
+        while True:
+            try:
+                item = self.fila.get(timeout=0.01)
+            except self._queue.Empty:
+                self.stream.write(silencio)
+                continue
+            if isinstance(item, bytes):
+                self.stream.write(item)
+            else:
+                item.set()   # chegou ao fim da fala
+
+    def tocar(self, pedacos):
+        """Toca áudio PCM 16 bits mono 24 kHz, pedaço por pedaço (já começa enquanto o resto chega)."""
+        sobra = b''
+        for pedaco in pedacos:
+            pedaco = sobra + pedaco
+            corte = len(pedaco) - len(pedaco) % 2   # amostras de 2 bytes não podem ser partidas
+            self.fila.put(pedaco[:corte])
+            sobra = pedaco[corte:]
+        fim = self._threading.Event()
+        self.fila.put(fim)
+        fim.wait()
+
+
+SAIDA = []   # a SaidaDeSom, criada por acordar_som()
+
+
+def acordar_som():
+    if not SAIDA:
+        try:
+            SAIDA.append(SaidaDeSom())
+        except Exception as erro:   # sem pyaudio ou sem saída de som: as falas usam o silêncio no começo
+            print(f'(não consegui manter a saída de som aberta: {erro})')
+            SAIDA.append(None)
+    return SAIDA[0]
+
+
 def _tocar(arquivo):
     import sys, subprocess
     if sys.platform == 'win32' and arquivo.endswith('.wav'):
@@ -333,22 +385,40 @@ def chave_elevenlabs():
 
 
 def voz_elevenlabs(voice_id):
-    """Voz da ElevenLabs pela API (precisa de internet e da chave). Gera WAV com silêncio no começo."""
+    """Voz da ElevenLabs pela API (precisa de internet e da chave). Com a SaidaDeSom, toca enquanto
+    o áudio ainda chega (streaming); sem ela, grava um WAV com silêncio no começo."""
     import tempfile, wave
     chave = chave_elevenlabs()
     if not chave:
         raise RuntimeError('falta a chave da ElevenLabs (rode o 5_escolher_voz.bat e escolha uma voz [ElevenLabs])')
     arquivo = os.path.join(tempfile.gettempdir(), 'tars_fala.wav')
-    url = f'https://api.elevenlabs.io/v1/text-to-speech/{voice_id}?output_format=pcm_24000'
+    url = f'https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream?output_format=pcm_24000'
+    saida = acordar_som()
 
     def preparar(texto):
         corpo = json.dumps({'text': texto, 'model_id': ELEVEN_MODELO}).encode()
         req = urllib.request.Request(url, corpo, {'xi-api-key': chave, 'Content-Type': 'application/json'})
         try:
-            with urllib.request.urlopen(req, timeout=30) as r:
-                pcm = r.read()
+            r = urllib.request.urlopen(req, timeout=30)
+            primeiro = r.read(4800)   # espera só os primeiros 0,1 s de áudio, não a frase toda
         except urllib.error.HTTPError as erro:   # mostra o motivo: chave errada, créditos, plano...
             raise RuntimeError(f'ElevenLabs {erro.code}: {erro.read().decode("utf-8", "ignore")[:200]}') from None
+        if saida:
+            def pedacos():
+                yield primeiro
+                with r:
+                    while True:
+                        try:
+                            pedaco = r.read(4800)
+                        except OSError as erro:   # internet caiu no meio da frase
+                            print(f'(a fala foi cortada: {erro})')
+                            return
+                        if not pedaco:
+                            return
+                        yield pedaco
+            return lambda: saida.tocar(pedacos())
+        with r:
+            pcm = primeiro + r.read()
         with wave.open(arquivo, 'wb') as w:
             w.setnchannels(1)
             w.setsampwidth(2)
@@ -377,10 +447,11 @@ def voz_neural(nome=None):
     def preparar(texto):
         fala = edge_tts.Communicate(texto, nome, rate=vel, pitch=tom)
         asyncio.run(fala.save(arquivo))
-        with open(arquivo, 'rb') as f:
-            mp3 = _com_silencio(f.read())
-        with open(arquivo, 'wb') as f:
-            f.write(mp3)
+        if not acordar_som():   # com a saída de som aberta, o silêncio só atrasaria a fala
+            with open(arquivo, 'rb') as f:
+                mp3 = _com_silencio(f.read())
+            with open(arquivo, 'wb') as f:
+                f.write(mp3)
         return lambda: _tocar(arquivo)
     return preparar
 
@@ -407,6 +478,7 @@ def voz(offline=False):
     """Retorna preparar(texto) → tocar(). Preparar gera o áudio antes, para os braços e a voz
     começarem juntos. Usa a voz escolhida; se ela falhar (internet, chave, créditos), passa para a
     voz da Microsoft e depois para a voz do sistema, até o fim da conversa."""
+    acordar_som()
     nome = _voz_escolhida()[0]
     motores = [] if offline else [lambda: _motor(nome)]
     if not offline and nome.startswith('elevenlabs:'):
