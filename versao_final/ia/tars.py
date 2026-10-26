@@ -42,6 +42,10 @@ VOZES = [   # (nome no edge-tts, descrição) para o --escolher-voz
     ('elevenlabs:blPx0tvsvee8CuFd63lX', '[ElevenLabs] Sávio, brasileira, calma e pausada'),
 ]
 ELEVEN_MODELO = 'eleven_flash_v2_5'   # o mais rápido; 'eleven_multilingual_v2' é mais natural, mas demora mais
+# Risada depois das piadas: o modelo v3 da ElevenLabs entende "[laughs]" e ri de verdade. As outras
+# vozes não sabem rir e pulam a etiqueta. Para desligar: RISADA = ''
+RISADA = ' [laughs]'
+RISADA_MODELO = 'eleven_v3'
 ARQUIVO_CHAVE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'elevenlabs_chave.txt')
 ARQUIVO_VOZ = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'voz.txt')
 ACOES = ('saudar', 'dancar', 'feliz', 'triste', 'sim', 'nao', 'pensar', 'repouso',
@@ -384,6 +388,11 @@ def chave_elevenlabs():
     return None
 
 
+def sem_etiquetas(texto):
+    """Tira etiquetas de emoção como "[laughs]" (só a ElevenLabs v3 sabe interpretá-las)."""
+    return re.sub(r'\s*\[[^\]]*\]', '', texto).strip()
+
+
 def voz_elevenlabs(voice_id):
     """Voz da ElevenLabs pela API (precisa de internet e da chave). Com a SaidaDeSom, toca enquanto
     o áudio ainda chega (streaming); sem ela, grava um WAV com silêncio no começo."""
@@ -395,14 +404,24 @@ def voz_elevenlabs(voice_id):
     url = f'https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream?output_format=pcm_24000'
     saida = acordar_som()
 
-    def preparar(texto):
-        corpo = json.dumps({'text': texto, 'model_id': ELEVEN_MODELO}).encode()
+    def pedir(texto, modelo):
+        corpo = json.dumps({'text': texto, 'model_id': modelo}).encode()
         req = urllib.request.Request(url, corpo, {'xi-api-key': chave, 'Content-Type': 'application/json'})
         try:
             r = urllib.request.urlopen(req, timeout=30)
-            primeiro = r.read(4800)   # espera só os primeiros 0,1 s de áudio, não a frase toda
+            return r, r.read(4800)   # espera só os primeiros 0,1 s de áudio, não a frase toda
         except urllib.error.HTTPError as erro:   # mostra o motivo: chave errada, créditos, plano...
             raise RuntimeError(f'ElevenLabs {erro.code}: {erro.read().decode("utf-8", "ignore")[:200]}') from None
+
+    def preparar(texto):
+        r = None
+        if '[' in texto:   # risada e outras etiquetas: só o modelo v3 entende
+            try:
+                r, primeiro = pedir(texto, RISADA_MODELO)
+            except Exception as erro:
+                print(f'(risada indisponível: {erro})')
+        if r is None:
+            r, primeiro = pedir(sem_etiquetas(texto), ELEVEN_MODELO)
         if saida:
             def pedacos():
                 yield primeiro
@@ -445,7 +464,7 @@ def voz_neural(nome=None):
         nome, tom, vel = VOZ_TARS, TOM, VELOCIDADE
 
     def preparar(texto):
-        fala = edge_tts.Communicate(texto, nome, rate=vel, pitch=tom)
+        fala = edge_tts.Communicate(sem_etiquetas(texto), nome, rate=vel, pitch=tom)
         asyncio.run(fala.save(arquivo))
         if not acordar_som():   # com a saída de som aberta, o silêncio só atrasaria a fala
             with open(arquivo, 'rb') as f:
@@ -468,7 +487,7 @@ def voz_offline():
         motor = pyttsx3.init()   # um motor novo por fala: no Windows o pyttsx3 às vezes emudece
         if pt:
             motor.setProperty('voice', pt.id)
-        motor.say(texto)
+        motor.say(sem_etiquetas(texto))
         motor.runAndWait()
         motor.stop()
     return lambda texto: lambda: falar(texto)
@@ -645,6 +664,7 @@ def _autoteste():
     assert comando_especial('Que dia é hoje?') is None
     assert '60' not in _ajustes(PERSONALIDADE) and '95%' in _ajustes(PERSONALIDADE)
     assert _com_silencio(b'\xff\xfb\x90\x64abc') == b'\xff\xfb\x90\x64abc'   # outro formato de mp3: não mexe
+    assert sem_etiquetas('Um robô entra num bar. [laughs]') == 'Um robô entra num bar.'
     AJUSTES.update(humor=75, honestidade=90)
     print('autoteste ok')
 
@@ -718,7 +738,7 @@ def conversar(robo, a):
                 print(f'Ollama: {erro} — abra o Ollama e confira o modelo com "ollama list"')
                 fala, acao = 'Perdi a conexão com o meu cérebro.', acao_por_palavra(ouvido) or 'triste'
         print(f'TARS: {fala}  [{acao}]')
-        tocar = preparar(fala)   # gera o áudio antes: braços e voz começam juntos
+        tocar = preparar(fala + RISADA if acao == 'piada' else fala)   # gera o áudio antes: braços e voz juntos
         robo.texto(tela or fala)
         robo.acao(acao)
         tocar()

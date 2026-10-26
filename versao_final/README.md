@@ -109,7 +109,7 @@ Para mudar o jeito do TARS falar, edite `PERSONALIDADE` no topo de `ia/tars.py`.
 |---|---|
 | "Caminhe" / "Anda" | **andar**: balança os blocos como no filme |
 | "Rola" / "Modo roda" | **roda**: os blocos giram juntos |
-| "Conta uma piada" | **piada**: a tela pisca (a "luz de piada") |
+| "Conta uma piada" | **piada**: a tela pisca (a "luz de piada") e, com voz da ElevenLabs, ele **ri** no fim (modelo `eleven_v3`; para desligar, `RISADA = ''` em `ia/tars.py`) |
 | "Ajuste o humor para 60%" | muda o humor da IA e mostra `HUMOR 60%` na tela |
 | "Honestidade 100 por cento" | muda a honestidade da IA |
 | "Qual o seu nível de humor?" | informa o ajuste atual |
