@@ -17,15 +17,33 @@ Para usar dentro do script do CP4:
   fala, acao = decidir(texto_reconhecido, historico)
   robo.texto(fala); robo.acao(acao)        # depois o script do CP4 fala `fala` como já faz
 """
-import argparse, json, re, time, unicodedata, urllib.request
+import argparse, json, os, re, time, unicodedata, urllib.error, urllib.request
 
 MODELO = 'llama3.2:3b'      # troque pelo modelo que vocês usam (veja com: ollama list)
 OLLAMA = 'http://localhost:11434/api/chat'
-# Voz do TARS: neural da Microsoft (edge-tts, precisa de internet), mais grave e um pouco devagar.
-# Teste outras com: edge-tts --list-voices | findstr pt-BR   (ex.: pt-BR-FranciscaNeural, pt-BR-ThalitaMultilingualNeural)
+# Voz do TARS: neural da Microsoft (edge-tts, precisa de internet). Para ouvir e escolher outra:
+# python tars.py --escolher-voz (ou 5_escolher_voz.bat), que grava a escolha em voz.txt.
 VOZ_TARS = 'pt-BR-AntonioNeural'
-TOM = '-12Hz'          # mais negativo = mais grave
-VELOCIDADE = '-5%'     # negativo = mais devagar
+TOM = '+0Hz'           # negativo = mais grave; mudar o tom deixa a voz mais "robótica"
+VELOCIDADE = '+0%'     # negativo = mais devagar
+VOZES = [   # (nome no edge-tts, descrição) para o --escolher-voz
+    ('pt-BR-AntonioNeural', 'masculina, brasileira'),
+    ('pt-BR-FranciscaNeural', 'feminina, brasileira'),
+    ('pt-BR-ThalitaMultilingualNeural', 'feminina, brasileira, a mais nova e expressiva'),
+    ('en-US-AndrewMultilingualNeural', 'masculina, multilíngue, bem natural (pode ter leve sotaque)'),
+    ('en-US-BrianMultilingualNeural', 'masculina, multilíngue, descontraída (pode ter leve sotaque)'),
+    ('en-US-AvaMultilingualNeural', 'feminina, multilíngue (pode ter leve sotaque)'),
+    # ElevenLabs (precisa da chave em elevenlabs_chave.txt). A Brian funciona no plano grátis; as vozes
+    # brasileiras são da biblioteca da ElevenLabs e pela API pedem um plano pago (a partir do Starter).
+    ('elevenlabs:nPczCjzI2devNBz1zQrb', '[ElevenLabs] Brian, masculina, multilíngue (plano grátis)'),
+    ('elevenlabs:E9a8LlXPNWtyvvSoZzrb', '[ElevenLabs] Talis, brasileira, natural e descontraída'),
+    ('elevenlabs:Dps47AVoFamqqkDShRDS', '[ElevenLabs] Fabio Oliveira, brasileira, grave e madura'),
+    ('elevenlabs:dIwbXBNI0A6EpdIWTvvr', '[ElevenLabs] Thiago Morais, brasileira'),
+    ('elevenlabs:blPx0tvsvee8CuFd63lX', '[ElevenLabs] Sávio, brasileira, calma e pausada'),
+]
+ELEVEN_MODELO = 'eleven_flash_v2_5'   # o mais rápido; 'eleven_multilingual_v2' é mais natural, mas demora mais
+ARQUIVO_CHAVE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'elevenlabs_chave.txt')
+ARQUIVO_VOZ = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'voz.txt')
 ACOES = ('saudar', 'dancar', 'feliz', 'triste', 'sim', 'nao', 'pensar', 'repouso',
          'andar', 'roda', 'piada', 'duvida', 'susto')
 
@@ -264,9 +282,64 @@ def _voz_portugues(motor):
     return None
 
 
-def _tocar_mp3(arquivo):
+class SaidaDeSom:
+    """Deixa a saída de som sempre aberta, tocando silêncio enquanto o TARS está calado. Sem isso, o
+    Windows "desliga" a placa de som entre uma fala e outra e come o começo da frase seguinte."""
+    TAXA = 24000   # a mesma do áudio da ElevenLabs (pcm_24000)
+
+    def __init__(self):
+        import pyaudio, queue, threading  # pip install pyaudio (o mesmo do microfone)
+        self._queue, self._threading = queue, threading
+        self.stream = pyaudio.PyAudio().open(format=pyaudio.paInt16, channels=1, rate=self.TAXA,
+                                             output=True, frames_per_buffer=self.TAXA // 50)
+        self.fila = queue.Queue()
+        threading.Thread(target=self._rodar, daemon=True).start()
+
+    def _rodar(self):
+        silencio = bytes(2 * self.TAXA // 50)   # 20 ms
+        while True:
+            try:
+                item = self.fila.get(timeout=0.01)
+            except self._queue.Empty:
+                self.stream.write(silencio)
+                continue
+            if isinstance(item, bytes):
+                self.stream.write(item)
+            else:
+                item.set()   # chegou ao fim da fala
+
+    def tocar(self, pedacos):
+        """Toca áudio PCM 16 bits mono 24 kHz, pedaço por pedaço (já começa enquanto o resto chega)."""
+        sobra = b''
+        for pedaco in pedacos:
+            pedaco = sobra + pedaco
+            corte = len(pedaco) - len(pedaco) % 2   # amostras de 2 bytes não podem ser partidas
+            self.fila.put(pedaco[:corte])
+            sobra = pedaco[corte:]
+        fim = self._threading.Event()
+        self.fila.put(fim)
+        fim.wait()
+
+
+SAIDA = []   # a SaidaDeSom, criada por acordar_som()
+
+
+def acordar_som():
+    if not SAIDA:
+        try:
+            SAIDA.append(SaidaDeSom())
+        except Exception as erro:   # sem pyaudio ou sem saída de som: as falas usam o silêncio no começo
+            print(f'(não consegui manter a saída de som aberta: {erro})')
+            SAIDA.append(None)
+    return SAIDA[0]
+
+
+def _tocar(arquivo):
     import sys, subprocess
-    if sys.platform == 'win32':     # MCI do próprio Windows: toca mp3 sem instalar nada
+    if sys.platform == 'win32' and arquivo.endswith('.wav'):
+        import winsound
+        winsound.PlaySound(arquivo, winsound.SND_FILENAME)
+    elif sys.platform == 'win32':     # MCI do próprio Windows: toca mp3 sem instalar nada
         import ctypes
         mci = ctypes.windll.winmm.mciSendStringW
         mci(f'open "{arquivo}" type mpegvideo alias tars', None, 0, None)
@@ -278,15 +351,108 @@ def _tocar_mp3(arquivo):
         subprocess.run(['ffplay', '-nodisp', '-autoexit', '-loglevel', 'quiet', arquivo], check=True)
 
 
-def voz_neural():
-    """Voz neural pt-BR (edge-tts). Precisa de internet; levanta erro se não conseguir."""
-    import asyncio, os, tempfile, edge_tts  # pip install edge-tts
-    arquivo = os.path.join(tempfile.gettempdir(), 'tars_fala.mp3')
+def _com_silencio(mp3, ms=400):
+    """Põe silêncio no começo do mp3 do edge-tts (MPEG-2 camada III, 24 kHz, 48 kbps, mono): a saída de
+    som do notebook "acorda" durante o silêncio e não come o começo da fala. Outro formato: não mexe."""
+    inicio = 10 + int.from_bytes(mp3[6:10], 'big') if mp3[:3] == b'ID3' else 0   # pula a etiqueta ID3
+    if mp3[inicio:inicio + 2] != b'\xff\xf3' or mp3[inicio + 2] & 0xFD != 0x64 or mp3[inicio + 3] >> 6 != 3:
+        return mp3
+    quadro = b'\xff\xf3\x64\xc0' + bytes(140)    # 144 bytes = 24 ms de silêncio
+    return mp3[:inicio] + quadro * (ms // 24) + mp3[inicio:]
+
+
+def _voz_escolhida():
+    """(voz, tom, velocidade) gravados pelo --escolher-voz em voz.txt; senão, os do topo do arquivo."""
+    try:
+        with open(ARQUIVO_VOZ, encoding='utf-8') as f:
+            nome, tom, vel = (f.read().split() + [TOM, VELOCIDADE])[:3]
+        return nome, tom, vel
+    except (OSError, ValueError):
+        return VOZ_TARS, TOM, VELOCIDADE
+
+
+def chave_elevenlabs():
+    """Chave da API: variável ELEVENLABS_API_KEY ou o arquivo elevenlabs_chave.txt (fora do GitHub)."""
+    if os.environ.get('ELEVENLABS_API_KEY'):
+        return os.environ['ELEVENLABS_API_KEY'].strip()
+    for arquivo in (ARQUIVO_CHAVE, ARQUIVO_CHAVE + '.txt'):   # o Bloco de Notas às vezes põe .txt de novo
+        try:
+            with open(arquivo, encoding='utf-8-sig') as f:
+                return f.read().strip()
+        except OSError:
+            pass
+    return None
+
+
+def voz_elevenlabs(voice_id):
+    """Voz da ElevenLabs pela API (precisa de internet e da chave). Com a SaidaDeSom, toca enquanto
+    o áudio ainda chega (streaming); sem ela, grava um WAV com silêncio no começo."""
+    import tempfile, wave
+    chave = chave_elevenlabs()
+    if not chave:
+        raise RuntimeError('falta a chave da ElevenLabs (rode o 5_escolher_voz.bat e escolha uma voz [ElevenLabs])')
+    arquivo = os.path.join(tempfile.gettempdir(), 'tars_fala.wav')
+    url = f'https://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream?output_format=pcm_24000'
+    saida = acordar_som()
 
     def preparar(texto):
-        fala = edge_tts.Communicate(texto, VOZ_TARS, rate=VELOCIDADE, pitch=TOM)
+        corpo = json.dumps({'text': texto, 'model_id': ELEVEN_MODELO}).encode()
+        req = urllib.request.Request(url, corpo, {'xi-api-key': chave, 'Content-Type': 'application/json'})
+        try:
+            r = urllib.request.urlopen(req, timeout=30)
+            primeiro = r.read(4800)   # espera só os primeiros 0,1 s de áudio, não a frase toda
+        except urllib.error.HTTPError as erro:   # mostra o motivo: chave errada, créditos, plano...
+            raise RuntimeError(f'ElevenLabs {erro.code}: {erro.read().decode("utf-8", "ignore")[:200]}') from None
+        if saida:
+            def pedacos():
+                yield primeiro
+                with r:
+                    while True:
+                        try:
+                            pedaco = r.read(4800)
+                        except OSError as erro:   # internet caiu no meio da frase
+                            print(f'(a fala foi cortada: {erro})')
+                            return
+                        if not pedaco:
+                            return
+                        yield pedaco
+            return lambda: saida.tocar(pedacos())
+        with r:
+            pcm = primeiro + r.read()
+        with wave.open(arquivo, 'wb') as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(24000)
+            w.writeframes(bytes(2 * 24000 * 4 // 10) + pcm)   # 0,4 s de silêncio: a saída de som "acorda"
+        return lambda: _tocar(arquivo)
+    return preparar
+
+
+def _motor(nome):
+    """preparar(texto) da voz pelo nome gravado em voz.txt."""
+    if nome.startswith('elevenlabs:'):
+        return voz_elevenlabs(nome.split(':', 1)[1])
+    return voz_neural(nome)
+
+
+def voz_neural(nome=None):
+    """Voz neural (edge-tts). Precisa de internet; levanta erro se não conseguir."""
+    import asyncio, tempfile, edge_tts  # pip install edge-tts
+    arquivo = os.path.join(tempfile.gettempdir(), 'tars_fala.mp3')
+    escolhida, tom, vel = _voz_escolhida()
+    nome = nome or escolhida
+    if nome.startswith('elevenlabs:'):   # reserva da ElevenLabs: a voz padrão da Microsoft
+        nome, tom, vel = VOZ_TARS, TOM, VELOCIDADE
+
+    def preparar(texto):
+        fala = edge_tts.Communicate(texto, nome, rate=vel, pitch=tom)
         asyncio.run(fala.save(arquivo))
-        return lambda: _tocar_mp3(arquivo)
+        if not acordar_som():   # com a saída de som aberta, o silêncio só atrasaria a fala
+            with open(arquivo, 'rb') as f:
+                mp3 = _com_silencio(f.read())
+            with open(arquivo, 'wb') as f:
+                f.write(mp3)
+        return lambda: _tocar(arquivo)
     return preparar
 
 
@@ -310,25 +476,72 @@ def voz_offline():
 
 def voz(offline=False):
     """Retorna preparar(texto) → tocar(). Preparar gera o áudio antes, para os braços e a voz
-    começarem juntos. Usa a voz neural do TARS; se faltar internet, passa para a voz do sistema."""
-    if offline:
-        return voz_offline()
-    try:
-        neural = voz_neural()
-    except ImportError:
-        print('Aviso: edge-tts não instalado (pip install edge-tts); usando a voz do sistema.')
-        return voz_offline()
-    reserva = []
+    começarem juntos. Usa a voz escolhida; se ela falhar (internet, chave, créditos), passa para a
+    voz da Microsoft e depois para a voz do sistema, até o fim da conversa."""
+    acordar_som()
+    nome = _voz_escolhida()[0]
+    motores = [] if offline else [lambda: _motor(nome)]
+    if not offline and nome.startswith('elevenlabs:'):
+        motores.append(lambda: voz_neural(VOZ_TARS))
+    motores.append(voz_offline)
+    atual = []
+
+    def proximo():
+        while motores:
+            try:
+                atual[:] = [motores.pop(0)()]
+                return
+            except Exception as erro:   # biblioteca não instalada, falta a chave...
+                print(f'(voz indisponível: {erro})')
 
     def preparar(texto):
-        if not reserva:
+        while True:
+            if not atual:
+                proximo()
             try:
-                return neural(texto)
+                return atual[0](texto)
             except Exception as erro:
-                print(f'(voz neural falhou: {erro}; usando a voz do sistema daqui em diante)')
-                reserva.append(voz_offline())
-        return reserva[0](texto)
+                if not motores:
+                    raise
+                print(f'(voz falhou: {erro}; usando a próxima voz daqui em diante)')
+                atual.clear()
+    proximo()
     return preparar
+
+
+def escolher_voz():
+    """Toca uma amostra de cada voz e grava a escolhida em voz.txt."""
+    amostra = 'Olá, eu sou o TARS. Meu nível de humor está em setenta e cinco por cento. Quer ouvir uma piada?'
+    atual = _voz_escolhida()[0]
+    while True:
+        print('\nVozes do TARS:')
+        for i, (nome, descricao) in enumerate(VOZES, 1):
+            print(f'  {i}. {descricao}{"   <- atual" if nome == atual else ""}')
+        resposta = input('Número para ouvir, "g" + número para gravar (ex.: g3), Enter para sair: ').strip().lower()
+        if not resposta:
+            return
+        gravar = resposta.startswith('g')
+        try:
+            nome = VOZES[int(resposta.lstrip('g ')) - 1][0]
+        except (ValueError, IndexError):
+            print('Não entendi.')
+            continue
+        if gravar:
+            with open(ARQUIVO_VOZ, 'w', encoding='utf-8') as f:
+                f.write(f'{nome} {TOM} {VELOCIDADE}\n')
+            print(f'Gravado: o TARS agora fala com {nome}.')
+            atual = nome
+            continue
+        try:
+            if nome.startswith('elevenlabs:') and not chave_elevenlabs():
+                chave = input('Cole a chave da API da ElevenLabs (elevenlabs.io → Developers → API Keys): ').strip()
+                if not chave:
+                    continue
+                with open(ARQUIVO_CHAVE, 'w', encoding='utf-8') as f:
+                    f.write(chave + '\n')
+            _motor(nome)(amostra)()
+        except Exception as erro:
+            print(f'Não consegui tocar essa voz ({erro}). Confira a internet.')
 
 
 def diagnostico(a):
@@ -359,10 +572,10 @@ def diagnostico(a):
     def voz_pt():
         if not a.voz_offline:
             try:
-                voz_neural()('Diagnóstico da voz.')()
-                return f'{VOZ_TARS} (neural, internet ok)'
+                _motor(_voz_escolhida()[0])('Diagnóstico da voz.')()
+                return f'{_voz_escolhida()[0]} (internet ok)'
             except Exception as erro:
-                print(f'         voz neural falhou ({erro}); conferindo a voz do sistema')
+                print(f'         voz escolhida falhou ({erro}); conferindo a voz do sistema')
         import pyttsx3
         v = _voz_portugues(pyttsx3.init())
         if not v:
@@ -431,6 +644,7 @@ def _autoteste():
     assert comando_especial('Você está brincando?')[1] == 'piada'
     assert comando_especial('Que dia é hoje?') is None
     assert '60' not in _ajustes(PERSONALIDADE) and '95%' in _ajustes(PERSONALIDADE)
+    assert _com_silencio(b'\xff\xfb\x90\x64abc') == b'\xff\xfb\x90\x64abc'   # outro formato de mp3: não mexe
     AJUSTES.update(humor=75, honestidade=90)
     print('autoteste ok')
 
@@ -446,12 +660,15 @@ def main():
     ap.add_argument('--mudo', action='store_true', help='não falar em voz alta (só texto)')
     ap.add_argument('--sem-robo', action='store_true')
     ap.add_argument('--teste', action='store_true', help='autoteste das funções')
+    ap.add_argument('--escolher-voz', action='store_true', help='ouvir as vozes e escolher a do TARS')
     ap.add_argument('--diagnostico', action='store_true', help='confere Ollama, voz, microfone, internet e robô')
     a = ap.parse_args()
     if a.teste:
         return _autoteste()
     if a.diagnostico:
         return diagnostico(a)
+    if a.escolher_voz:
+        return escolher_voz()
 
     robo = Robo(None if a.sem_robo else a.porta, a.baud)
     try:
