@@ -21,6 +21,11 @@ import argparse, json, time, unicodedata, urllib.request
 
 MODELO = 'llama3.2:3b'      # troque pelo modelo que vocês usam (veja com: ollama list)
 OLLAMA = 'http://localhost:11434/api/chat'
+# Voz do TARS: neural da Microsoft (edge-tts, precisa de internet), mais grave e um pouco devagar.
+# Teste outras com: edge-tts --list-voices | findstr pt-BR   (ex.: pt-BR-FranciscaNeural, pt-BR-ThalitaMultilingualNeural)
+VOZ_TARS = 'pt-BR-AntonioNeural'
+TOM = '-12Hz'          # mais negativo = mais grave
+VELOCIDADE = '-5%'     # negativo = mais devagar
 ACOES = ('saudar', 'dancar', 'feliz', 'triste', 'sim', 'nao', 'pensar', 'repouso')
 
 # Personalidade do TARS — ajustem do jeito do grupo (é o que mais muda a "cara" do robô).
@@ -203,8 +208,34 @@ def _voz_portugues(motor):
     return None
 
 
-def voz():
-    """Voz sintetizada offline (vozes do Windows). Se o CP4 usa outra, troquem aqui."""
+def _tocar_mp3(arquivo):
+    import sys, subprocess
+    if sys.platform == 'win32':     # MCI do próprio Windows: toca mp3 sem instalar nada
+        import ctypes
+        mci = ctypes.windll.winmm.mciSendStringW
+        mci(f'open "{arquivo}" type mpegvideo alias tars', None, 0, None)
+        mci('play tars wait', None, 0, None)
+        mci('close tars', None, 0, None)
+    elif sys.platform == 'darwin':
+        subprocess.run(['afplay', arquivo], check=True)
+    else:
+        subprocess.run(['ffplay', '-nodisp', '-autoexit', '-loglevel', 'quiet', arquivo], check=True)
+
+
+def voz_neural():
+    """Voz neural pt-BR (edge-tts). Precisa de internet; levanta erro se não conseguir."""
+    import asyncio, os, tempfile, edge_tts  # pip install edge-tts
+    arquivo = os.path.join(tempfile.gettempdir(), 'tars_fala.mp3')
+
+    def falar(texto):
+        fala = edge_tts.Communicate(texto, VOZ_TARS, rate=VELOCIDADE, pitch=TOM)
+        asyncio.run(fala.save(arquivo))
+        _tocar_mp3(arquivo)
+    return falar
+
+
+def voz_offline():
+    """Voz do sistema (pyttsx3), sem internet."""
     import pyttsx3  # pip install pyttsx3
     pt = _voz_portugues(pyttsx3.init())
     if not pt:
@@ -218,6 +249,28 @@ def voz():
         motor.say(texto)
         motor.runAndWait()
         motor.stop()
+    return falar
+
+
+def voz(offline=False):
+    """Fala com a voz neural do TARS; se faltar internet, passa para a voz do sistema até o fim."""
+    if offline:
+        return voz_offline()
+    try:
+        neural = voz_neural()
+    except ImportError:
+        print('Aviso: edge-tts não instalado (pip install edge-tts); usando a voz do sistema.')
+        return voz_offline()
+    reserva = []
+
+    def falar(texto):
+        if not reserva:
+            try:
+                return neural(texto)
+            except Exception as erro:
+                print(f'(voz neural falhou: {erro}; usando a voz do sistema daqui em diante)')
+                reserva.append(voz_offline())
+        reserva[0](texto)
     return falar
 
 
@@ -247,11 +300,17 @@ def diagnostico(a):
         return f'{time.time() - inicio:.1f} s → "{fala}" [{acao}]'
 
     def voz_pt():
+        if not a.voz_offline:
+            try:
+                voz_neural()('Diagnóstico da voz.')
+                return f'{VOZ_TARS} (neural, internet ok)'
+            except Exception as erro:
+                print(f'         voz neural falhou ({erro}); conferindo a voz do sistema')
         import pyttsx3
         v = _voz_portugues(pyttsx3.init())
         if not v:
-            raise RuntimeError('nenhuma voz em português (Configurações → Hora e idioma → Fala)')
-        return v.name
+            raise RuntimeError('sem voz neural e sem voz do sistema em português (Configurações → Hora e idioma → Fala)')
+        return f'{v.name} (voz do sistema)'
 
     def mic():
         import speech_recognition as sr
@@ -314,6 +373,7 @@ def main():
     ap.add_argument('--modelo', default=MODELO)
     ap.add_argument('--teclado', action='store_true', help='digitar em vez de usar o microfone (o TARS continua falando)')
     ap.add_argument('--vosk', metavar='PASTA', help='reconhecimento de voz offline com este modelo Vosk')
+    ap.add_argument('--voz-offline', action='store_true', help='usar a voz do sistema em vez da voz neural (sem internet)')
     ap.add_argument('--mudo', action='store_true', help='não falar em voz alta (só texto)')
     ap.add_argument('--sem-robo', action='store_true')
     ap.add_argument('--teste', action='store_true', help='autoteste das funções')
@@ -337,7 +397,7 @@ def conversar(robo, a):
         ouvir = lambda: input('você> ')
     else:
         ouvir = microfone_offline(a.vosk) if a.vosk else microfone()
-    falar = print if a.mudo else voz()
+    falar = print if a.mudo else voz(a.voz_offline)
     historico = []
     robo.texto('ACORDANDO...')
     print('Carregando a IA (a primeira vez demora)...')

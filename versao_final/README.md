@@ -102,3 +102,15 @@ Feche o Monitor Serial do Arduino IDE antes (ele ocupa a porta). Na pasta `versa
 Na conversa, a tela mostra **OUVINDO… → PENSANDO… → a resposta**, o notebook fala e os braços fazem a ação. "Oi, TARS" sempre acena, "Dança pra gente" sempre dança e "Parabéns" sempre comemora, mesmo se a IA falhar. Diga **"desligar"** para encerrar: o robô volta à coreografia.
 
 Para mudar o jeito do TARS falar, edite `PERSONALIDADE` no topo de `ia/tars.py`.
+
+## Voz do TARS
+
+O TARS fala com a voz neural **pt-BR-AntonioNeural** (Microsoft, via `edge-tts`), mais grave e mais devagar. Ela precisa de internet; sem internet, o `tars.py` passa sozinho para a voz do Windows (ou rode com `--voz-offline`).
+
+Para ajustar, edite no topo de `ia/tars.py`:
+
+| Constante | O que muda | Exemplo |
+|---|---|---|
+| `VOZ_TARS` | a voz | `pt-BR-AntonioNeural`, `pt-BR-FranciscaNeural` |
+| `TOM` | grave ↔ agudo | `-20Hz` mais grave, `+0Hz` normal |
+| `VELOCIDADE` | ritmo | `-10%` mais devagar, `+10%` mais rápido |
