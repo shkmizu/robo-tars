@@ -167,8 +167,11 @@ def decidir(ouvido, historico, modelo=MODELO):
     return fala, acao_por_palavra(ouvido) or acao
 
 
-# Nomes com que o Uno (e os clones com chip CH340) aparece na lista de portas.
-NOMES_ARDUINO = ('arduino', 'ch340', 'ch34', 'usb-serial', 'usb serial', 'wchusbserial', 'usbserial', 'usbmodem')
+# Como o Uno (e os clones com chip CH340) aparece na lista de portas: pelo fabricante do chip USB
+# (VID: Arduino, CH340, FTDI, CP210x) ou pelo nome, que muda com o idioma do Windows.
+VIDS_ARDUINO = (0x2341, 0x2A03, 0x1A86, 0x0403, 0x10C4)
+NOMES_ARDUINO = ('arduino', 'ch340', 'ch34', 'usb-serial', 'usb serial', 'serial usb', 'wchusbserial',
+                 'usbserial', 'usbmodem')
 
 
 def encontrar_porta():
@@ -176,8 +179,14 @@ def encontrar_porta():
     from serial.tools import list_ports  # pip install pyserial
     portas = list(list_ports.comports())
     for p in portas:
+        if p.vid in VIDS_ARDUINO:
+            return p.device
+    for p in portas:
         if any(n in f'{p.device} {p.description} {p.manufacturer}'.lower() for n in NOMES_ARDUINO):
             return p.device
+    usb = [p for p in portas if p.vid is not None]   # sobrou uma porta USB só: é o Uno
+    if len(usb) == 1:
+        return usb[0].device
     achadas = ', '.join(f'{p.device} ({p.description})' for p in portas) or 'nenhuma'
     raise SystemExit(f'Não achei o Arduino no USB. Portas encontradas: {achadas}. '
                      'Confira o cabo e o driver CH340, ou rode com --porta COMx.')
