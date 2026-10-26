@@ -124,12 +124,17 @@ O `tars.py` gera o áudio antes de mandar o gesto, então os braços e a voz com
 
 ## Voz do TARS
 
-O TARS fala com a voz neural **pt-BR-AntonioNeural** (Microsoft, via `edge-tts`), mais grave e mais devagar. Ela precisa de internet; sem internet, o `tars.py` passa sozinho para a voz do Windows (ou rode com `--voz-offline`).
+O TARS fala com uma voz neural da Microsoft (`edge-tts`). Ela precisa de internet; sem internet, o `tars.py` passa sozinho para a voz do Windows (ou rode com `--voz-offline`).
 
-Para ajustar, edite no topo de `ia/tars.py`:
+**Escolher a voz:** dê clique duplo em `5_escolher_voz.bat` (ou `python tars.py --escolher-voz`). Digite um número para ouvir a amostra e `g` + número (ex.: `g4`) para gravar. A escolha fica em `ia/voz.txt`.
 
-| Constante | O que muda | Exemplo |
+| Nº | Voz | Como é |
 |---|---|---|
-| `VOZ_TARS` | a voz | `pt-BR-AntonioNeural`, `pt-BR-FranciscaNeural` |
-| `TOM` | grave ↔ agudo | `-20Hz` mais grave, `+0Hz` normal |
-| `VELOCIDADE` | ritmo | `-10%` mais devagar, `+10%` mais rápido |
+| 1 | `pt-BR-AntonioNeural` | masculina, brasileira (padrão) |
+| 2 | `pt-BR-FranciscaNeural` | feminina, brasileira |
+| 3 | `pt-BR-ThalitaMultilingualNeural` | feminina, brasileira, a mais nova e expressiva |
+| 4 | `en-US-AndrewMultilingualNeural` | masculina, multilíngue, bem natural (pode ter leve sotaque) |
+| 5 | `en-US-BrianMultilingualNeural` | masculina, multilíngue, descontraída |
+| 6 | `en-US-AvaMultilingualNeural` | feminina, multilíngue |
+
+`TOM` e `VELOCIDADE` no topo de `ia/tars.py` mudam o tom e o ritmo (ex.: `-10Hz`, `-5%`), mas qualquer mudança deixa a voz menos natural.

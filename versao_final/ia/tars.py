@@ -17,15 +17,24 @@ Para usar dentro do script do CP4:
   fala, acao = decidir(texto_reconhecido, historico)
   robo.texto(fala); robo.acao(acao)        # depois o script do CP4 fala `fala` como já faz
 """
-import argparse, json, re, time, unicodedata, urllib.request
+import argparse, json, os, re, time, unicodedata, urllib.request
 
 MODELO = 'llama3.2:3b'      # troque pelo modelo que vocês usam (veja com: ollama list)
 OLLAMA = 'http://localhost:11434/api/chat'
-# Voz do TARS: neural da Microsoft (edge-tts, precisa de internet), mais grave e um pouco devagar.
-# Teste outras com: edge-tts --list-voices | findstr pt-BR   (ex.: pt-BR-FranciscaNeural, pt-BR-ThalitaMultilingualNeural)
+# Voz do TARS: neural da Microsoft (edge-tts, precisa de internet). Para ouvir e escolher outra:
+# python tars.py --escolher-voz (ou 5_escolher_voz.bat), que grava a escolha em voz.txt.
 VOZ_TARS = 'pt-BR-AntonioNeural'
-TOM = '-12Hz'          # mais negativo = mais grave
-VELOCIDADE = '-5%'     # negativo = mais devagar
+TOM = '+0Hz'           # negativo = mais grave; mudar o tom deixa a voz mais "robótica"
+VELOCIDADE = '+0%'     # negativo = mais devagar
+VOZES = [   # (nome no edge-tts, descrição) para o --escolher-voz
+    ('pt-BR-AntonioNeural', 'masculina, brasileira'),
+    ('pt-BR-FranciscaNeural', 'feminina, brasileira'),
+    ('pt-BR-ThalitaMultilingualNeural', 'feminina, brasileira, a mais nova e expressiva'),
+    ('en-US-AndrewMultilingualNeural', 'masculina, multilíngue, bem natural (pode ter leve sotaque)'),
+    ('en-US-BrianMultilingualNeural', 'masculina, multilíngue, descontraída (pode ter leve sotaque)'),
+    ('en-US-AvaMultilingualNeural', 'feminina, multilíngue (pode ter leve sotaque)'),
+]
+ARQUIVO_VOZ = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'voz.txt')
 ACOES = ('saudar', 'dancar', 'feliz', 'triste', 'sim', 'nao', 'pensar', 'repouso',
          'andar', 'roda', 'piada', 'duvida', 'susto')
 
@@ -288,13 +297,25 @@ def _com_silencio(mp3, ms=400):
     return mp3[:inicio] + quadro * (ms // 24) + mp3[inicio:]
 
 
-def voz_neural():
-    """Voz neural pt-BR (edge-tts). Precisa de internet; levanta erro se não conseguir."""
+def _voz_escolhida():
+    """(voz, tom, velocidade) gravados pelo --escolher-voz em voz.txt; senão, os do topo do arquivo."""
+    try:
+        with open(ARQUIVO_VOZ, encoding='utf-8') as f:
+            nome, tom, vel = (f.read().split() + [TOM, VELOCIDADE])[:3]
+        return nome, tom, vel
+    except (OSError, ValueError):
+        return VOZ_TARS, TOM, VELOCIDADE
+
+
+def voz_neural(nome=None):
+    """Voz neural (edge-tts). Precisa de internet; levanta erro se não conseguir."""
     import asyncio, os, tempfile, edge_tts  # pip install edge-tts
     arquivo = os.path.join(tempfile.gettempdir(), 'tars_fala.mp3')
+    escolhida, tom, vel = _voz_escolhida()
+    nome = nome or escolhida
 
     def preparar(texto):
-        fala = edge_tts.Communicate(texto, VOZ_TARS, rate=VELOCIDADE, pitch=TOM)
+        fala = edge_tts.Communicate(texto, nome, rate=vel, pitch=tom)
         asyncio.run(fala.save(arquivo))
         with open(arquivo, 'rb') as f:
             mp3 = _com_silencio(f.read())
@@ -345,6 +366,35 @@ def voz(offline=False):
     return preparar
 
 
+def escolher_voz():
+    """Toca uma amostra de cada voz e grava a escolhida em voz.txt."""
+    amostra = 'Olá, eu sou o TARS. Meu nível de humor está em setenta e cinco por cento. Quer ouvir uma piada?'
+    atual = _voz_escolhida()[0]
+    while True:
+        print('\nVozes do TARS:')
+        for i, (nome, descricao) in enumerate(VOZES, 1):
+            print(f'  {i}. {descricao}{"   <- atual" if nome == atual else ""}')
+        resposta = input('Número para ouvir, "g" + número para gravar (ex.: g3), Enter para sair: ').strip().lower()
+        if not resposta:
+            return
+        gravar = resposta.startswith('g')
+        try:
+            nome = VOZES[int(resposta.lstrip('g ')) - 1][0]
+        except (ValueError, IndexError):
+            print('Não entendi.')
+            continue
+        if gravar:
+            with open(ARQUIVO_VOZ, 'w', encoding='utf-8') as f:
+                f.write(f'{nome} {TOM} {VELOCIDADE}\n')
+            print(f'Gravado: o TARS agora fala com {nome}.')
+            atual = nome
+            continue
+        try:
+            voz_neural(nome)(amostra)()
+        except Exception as erro:
+            print(f'Não consegui tocar essa voz ({erro}). Confira a internet.')
+
+
 def diagnostico(a):
     """Confere tudo o que a apresentação precisa e diz o que falta. Rodar na sala antes de apresentar."""
     falhas = 0
@@ -374,7 +424,7 @@ def diagnostico(a):
         if not a.voz_offline:
             try:
                 voz_neural()('Diagnóstico da voz.')()
-                return f'{VOZ_TARS} (neural, internet ok)'
+                return f'{_voz_escolhida()[0]} (neural, internet ok)'
             except Exception as erro:
                 print(f'         voz neural falhou ({erro}); conferindo a voz do sistema')
         import pyttsx3
@@ -461,12 +511,15 @@ def main():
     ap.add_argument('--mudo', action='store_true', help='não falar em voz alta (só texto)')
     ap.add_argument('--sem-robo', action='store_true')
     ap.add_argument('--teste', action='store_true', help='autoteste das funções')
+    ap.add_argument('--escolher-voz', action='store_true', help='ouvir as vozes e escolher a do TARS')
     ap.add_argument('--diagnostico', action='store_true', help='confere Ollama, voz, microfone, internet e robô')
     a = ap.parse_args()
     if a.teste:
         return _autoteste()
     if a.diagnostico:
         return diagnostico(a)
+    if a.escolher_voz:
+        return escolher_voz()
 
     robo = Robo(None if a.sem_robo else a.porta, a.baud)
     try:
