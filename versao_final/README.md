@@ -16,7 +16,7 @@ A versão de teste continua em `arduino/robo_bracos/` e `ia/tars.py`, sem mudan�
 |---|---|---|
 | Coreografia enquanto a IA ouve | volta sozinha depois de 30 s sem comando | fica **desligada** durante a conversa (comando `m 0`) |
 | Ao sair do `tars.py` ("desligar" ou Ctrl+C) | nada muda | o robô **volta à coreografia** (`m 1`) |
-| Novo comando | — | `m 0` / `m 1`: modo autônomo desligado / ligado |
+| Novo comando | — | `m 0` / `m 1`: modo autônomo desligado / ligado; ações novas `andar`, `roda`, `piada`, `duvida`, `susto` |
 
 Sem o notebook, os dois funcionam igual: ao ligar as pilhas, o robô faz a coreografia sozinho.
 
@@ -48,7 +48,7 @@ O código está no branch **`claude/relaxed-lamport-gdcxxg`** (ainda não no `ma
 
 1. **Baixar:** abra https://github.com/shkmizu/robo-tars/archive/refs/heads/claude/relaxed-lamport-gdcxxg.zip (com a conta que tem acesso ao repositório) e descompacte. Ou, no GitHub, troque o branch para `claude/relaxed-lamport-gdcxxg` e use **Code → Download ZIP**.
 2. **Instalar uma vez:**
-   - **Python 3.12** (python.org): na instalação, marque **"Add python.exe to PATH"**.
+   - **Python 3.12** (instalador direto: https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe; as versões 3.12 mais novas no site não têm instalador): na instalação, marque **"Add python.exe to PATH"**. Tem que ser o 3.12 (ou 3.11): no Python mais novo o `pyaudio` (microfone) não instala e pede o "Microsoft Visual C++". Se já tem outro Python, pode deixar: os `.bat` escolhem o 3.12 sozinhos.
    - **Ollama** (ollama.com).
    - **Voz em português:** Configurações → Hora e idioma → Fala → Português (Brasil).
 3. Na pasta `versao_final/ia`, dê **clique duplo** nos arquivos, nesta ordem:
@@ -102,3 +102,34 @@ Feche o Monitor Serial do Arduino IDE antes (ele ocupa a porta). Na pasta `versa
 Na conversa, a tela mostra **OUVINDO… → PENSANDO… → a resposta**, o notebook fala e os braços fazem a ação. "Oi, TARS" sempre acena, "Dança pra gente" sempre dança e "Parabéns" sempre comemora, mesmo se a IA falhar. Diga **"desligar"** para encerrar: o robô volta à coreografia.
 
 Para mudar o jeito do TARS falar, edite `PERSONALIDADE` no topo de `ia/tars.py`.
+
+## Gestos e falas do filme
+
+| Diga | O TARS faz |
+|---|---|
+| "Caminhe" / "Anda" | **andar**: balança os blocos como no filme |
+| "Rola" / "Modo roda" | **roda**: os blocos giram juntos |
+| "Conta uma piada" | **piada**: a tela pisca (a "luz de piada") |
+| "Ajuste o humor para 60%" | muda o humor da IA e mostra `HUMOR 60%` na tela |
+| "Honestidade 100 por cento" | muda a honestidade da IA |
+| "Qual o seu nível de humor?" | informa o ajuste atual |
+| "Quem é você?" / "Se apresente" | apresentação do TARS |
+| "Você está brincando?" | fala da luz de piada |
+| "Isso não é possível" | "Não. É necessário." |
+| "Posso confiar em você?" | fala da honestidade |
+
+As falas do filme e os ajustes respondem na hora, sem esperar a IA. Para criar outras, edite a lista `FILME` em `ia/tars.py`. A IA também pode escolher sozinha os gestos novos (`duvida`, `susto`, …).
+
+O `tars.py` gera o áudio antes de mandar o gesto, então os braços e a voz começam juntos.
+
+## Voz do TARS
+
+O TARS fala com a voz neural **pt-BR-AntonioNeural** (Microsoft, via `edge-tts`), mais grave e mais devagar. Ela precisa de internet; sem internet, o `tars.py` passa sozinho para a voz do Windows (ou rode com `--voz-offline`).
+
+Para ajustar, edite no topo de `ia/tars.py`:
+
+| Constante | O que muda | Exemplo |
+|---|---|---|
+| `VOZ_TARS` | a voz | `pt-BR-AntonioNeural`, `pt-BR-FranciscaNeural` |
+| `TOM` | grave ↔ agudo | `-20Hz` mais grave, `+0Hz` normal |
+| `VELOCIDADE` | ritmo | `-10%` mais devagar, `+10%` mais rápido |

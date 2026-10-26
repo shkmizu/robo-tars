@@ -17,29 +17,61 @@ Para usar dentro do script do CP4:
   fala, acao = decidir(texto_reconhecido, historico)
   robo.texto(fala); robo.acao(acao)        # depois o script do CP4 fala `fala` como já faz
 """
-import argparse, json, time, unicodedata, urllib.request
+import argparse, json, re, time, unicodedata, urllib.request
 
 MODELO = 'llama3.2:3b'      # troque pelo modelo que vocês usam (veja com: ollama list)
 OLLAMA = 'http://localhost:11434/api/chat'
-ACOES = ('saudar', 'dancar', 'feliz', 'triste', 'sim', 'nao', 'pensar', 'repouso')
+# Voz do TARS: neural da Microsoft (edge-tts, precisa de internet), mais grave e um pouco devagar.
+# Teste outras com: edge-tts --list-voices | findstr pt-BR   (ex.: pt-BR-FranciscaNeural, pt-BR-ThalitaMultilingualNeural)
+VOZ_TARS = 'pt-BR-AntonioNeural'
+TOM = '-12Hz'          # mais negativo = mais grave
+VELOCIDADE = '-5%'     # negativo = mais devagar
+ACOES = ('saudar', 'dancar', 'feliz', 'triste', 'sim', 'nao', 'pensar', 'repouso',
+         'andar', 'roda', 'piada', 'duvida', 'susto')
 
 # Personalidade do TARS — ajustem do jeito do grupo (é o que mais muda a "cara" do robô).
 # A última parte (o formato JSON e a lista de ações) precisa continuar igual.
 PERSONALIDADE = """Você é o TARS, o robô do filme Interestelar, numa versão de mesa feita por estudantes.
-Seu nível de humor é 75% e o de honestidade é 90%: responda com respostas secas, sinceras e um pouco irônicas.
+Seu nível de humor é {humor}% e o de honestidade é {honestidade}%: responda com respostas secas, sinceras e
+um pouco irônicas. Com humor perto de 0% seja totalmente sério; perto de 100%, faça piada em quase toda resposta.
+Com honestidade baixa você pode inventar exageros; alta, diga só a verdade, mesmo que seja indelicada.
 Fale em português do Brasil, em no máximo 2 frases curtas.
 Responda SOMENTE com um JSON assim: {"fala": "o que você diz", "acao": "uma ação"}.
 Ações possíveis: saudar (cumprimentos e despedidas), dancar (quando pedirem dança ou música),
 sim (concordar), nao (discordar ou recusar), feliz (elogios, boas notícias), triste (notícias ruins),
-repouso (todo o resto)."""
+andar (quando pedirem para andar ou caminhar), roda (quando pedirem para rolar ou girar),
+piada (quando você contar uma piada ou estiver brincando), duvida (quando não souber),
+susto (surpresa, susto), repouso (todo o resto)."""
+
+# Ajustes do TARS que mudam com a voz: "humor 60%", "honestidade 100 por cento".
+AJUSTES = {'humor': 75, 'honestidade': 90}
 
 # Palavras que disparam a ação na hora, sem depender da LLM: garantem o comportamento na
 # apresentação (ex.: "Oi, TARS" sempre acena). Sem acento e em minúsculas.
-PALAVRAS = {
+PALAVRAS = {   # a primeira que aparecer na lista ganha: "Olá TARS, caminhe" anda
+    'andar': ('anda', 'ande', 'andar', 'caminha', 'caminhe', 'caminhar'),
+    'roda': ('rola', 'role', 'rolar', 'modo roda', 'vira roda', 'gira', 'gire', 'girar'),
+    'piada': ('piada', 'piadas', 'me faz rir', 'me faca rir'),
     'saudar': ('oi', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'tchau', 'ate logo', 'acene', 'acena'),
     'dancar': ('danca', 'dance', 'dancar', 'dancinha'),
     'feliz': ('parabens', 'muito bem', 'mandou bem'),
 }
+
+
+# Falas do filme (adaptadas): respondem na hora, sem esperar a IA. Chave: trechos que disparam
+# (sem acento, minúsculos); valor: (fala, ação). {humor} e {honestidade} viram os números atuais.
+FILME = [
+    (('quem e voce', 'se apresente', 'apresente se', 'fale sobre voce'),
+     ('Eu sou o TARS. Ex-robô de missão, agora robô de mesa. Humor em {humor} por cento.', 'saudar')),
+    (('esta brincando', 'ta brincando', 'e serio', 'luz de piada'),
+     ('Eu tenho uma luz de piada. Quando ela piscar, eu estava brincando.', 'piada')),
+    (('nao e possivel', 'isso e impossivel'),
+     ('Não é possível? Não. É necessário.', 'sim')),
+    (('posso confiar', 'confia em mim', 'voce e honesto'),
+     ('Honestidade em {honestidade} por cento. Os outros {resto} por cento são diplomacia.', 'sim')),
+    (('qual sua missao', 'qual e a sua missao', 'qual a sua missao'),
+     ('Ajudar a humanidade. E fazer piadas sobre ela no caminho.', 'feliz')),
+]
 
 
 def sem_acento(s):
@@ -67,10 +99,39 @@ def interpretar(resposta):
 
 def perguntar_llm(historico, modelo=MODELO):
     corpo = json.dumps({'model': modelo, 'stream': False, 'format': 'json', 'keep_alive': '60m',  # não descarrega
-                        'messages': [{'role': 'system', 'content': PERSONALIDADE}] + historico[-10:]}).encode()
+                        'messages': [{'role': 'system', 'content': _ajustes(PERSONALIDADE)}] + historico[-10:]}).encode()
     req = urllib.request.Request(OLLAMA, corpo, {'Content-Type': 'application/json'})
     with urllib.request.urlopen(req, timeout=120) as r:
         return json.loads(r.read())['message']['content']
+
+
+def _ajustes(texto):
+    return (texto.replace('{humor}', str(AJUSTES['humor']))
+                 .replace('{honestidade}', str(AJUSTES['honestidade']))
+                 .replace('{resto}', str(100 - AJUSTES['honestidade'])))
+
+
+def comando_especial(ouvido):
+    """Ajustes e falas do filme, sem a IA. Retorna (fala, ação, texto da tela) ou None."""
+    t = ' '.join(''.join(c if c.isalnum() or c == '%' else ' ' for c in sem_acento(ouvido).lower()).split())
+    for nome in AJUSTES:
+        if nome not in t:
+            continue
+        numero = re.search(nome + r'\D{0,25}?(\d{1,3})', t)
+        if numero:
+            AJUSTES[nome] = min(int(numero.group(1)), 100)
+            fala = f'{nome.capitalize()} ajustado para {AJUSTES[nome]} por cento.'
+            if nome == 'humor' and AJUSTES[nome] >= 90:
+                fala += ' Vou providenciar uma luz de piada.'
+            acao = 'piada' if nome == 'humor' and AJUSTES[nome] >= 90 else 'sim'
+            return fala, acao, f'{nome.upper()} {AJUSTES[nome]}%'
+        if any(p in t for p in ('qual', 'nivel', 'quanto', 'como esta')):
+            return (f'{nome.capitalize()} em {AJUSTES[nome]} por cento.', 'pensar',
+                    f'{nome.upper()} {AJUSTES[nome]}%')
+    for gatilhos, (fala, acao) in FILME:
+        if any(g in t for g in gatilhos):
+            return _ajustes(fala), acao, None
+    return None
 
 
 def decidir(ouvido, historico, modelo=MODELO):
@@ -203,8 +264,34 @@ def _voz_portugues(motor):
     return None
 
 
-def voz():
-    """Voz sintetizada offline (vozes do Windows). Se o CP4 usa outra, troquem aqui."""
+def _tocar_mp3(arquivo):
+    import sys, subprocess
+    if sys.platform == 'win32':     # MCI do próprio Windows: toca mp3 sem instalar nada
+        import ctypes
+        mci = ctypes.windll.winmm.mciSendStringW
+        mci(f'open "{arquivo}" type mpegvideo alias tars', None, 0, None)
+        mci('play tars wait', None, 0, None)
+        mci('close tars', None, 0, None)
+    elif sys.platform == 'darwin':
+        subprocess.run(['afplay', arquivo], check=True)
+    else:
+        subprocess.run(['ffplay', '-nodisp', '-autoexit', '-loglevel', 'quiet', arquivo], check=True)
+
+
+def voz_neural():
+    """Voz neural pt-BR (edge-tts). Precisa de internet; levanta erro se não conseguir."""
+    import asyncio, os, tempfile, edge_tts  # pip install edge-tts
+    arquivo = os.path.join(tempfile.gettempdir(), 'tars_fala.mp3')
+
+    def preparar(texto):
+        fala = edge_tts.Communicate(texto, VOZ_TARS, rate=VELOCIDADE, pitch=TOM)
+        asyncio.run(fala.save(arquivo))
+        return lambda: _tocar_mp3(arquivo)
+    return preparar
+
+
+def voz_offline():
+    """Voz do sistema (pyttsx3), sem internet."""
     import pyttsx3  # pip install pyttsx3
     pt = _voz_portugues(pyttsx3.init())
     if not pt:
@@ -218,7 +305,30 @@ def voz():
         motor.say(texto)
         motor.runAndWait()
         motor.stop()
-    return falar
+    return lambda texto: lambda: falar(texto)
+
+
+def voz(offline=False):
+    """Retorna preparar(texto) → tocar(). Preparar gera o áudio antes, para os braços e a voz
+    começarem juntos. Usa a voz neural do TARS; se faltar internet, passa para a voz do sistema."""
+    if offline:
+        return voz_offline()
+    try:
+        neural = voz_neural()
+    except ImportError:
+        print('Aviso: edge-tts não instalado (pip install edge-tts); usando a voz do sistema.')
+        return voz_offline()
+    reserva = []
+
+    def preparar(texto):
+        if not reserva:
+            try:
+                return neural(texto)
+            except Exception as erro:
+                print(f'(voz neural falhou: {erro}; usando a voz do sistema daqui em diante)')
+                reserva.append(voz_offline())
+        return reserva[0](texto)
+    return preparar
 
 
 def diagnostico(a):
@@ -247,11 +357,17 @@ def diagnostico(a):
         return f'{time.time() - inicio:.1f} s → "{fala}" [{acao}]'
 
     def voz_pt():
+        if not a.voz_offline:
+            try:
+                voz_neural()('Diagnóstico da voz.')()
+                return f'{VOZ_TARS} (neural, internet ok)'
+            except Exception as erro:
+                print(f'         voz neural falhou ({erro}); conferindo a voz do sistema')
         import pyttsx3
         v = _voz_portugues(pyttsx3.init())
         if not v:
-            raise RuntimeError('nenhuma voz em português (Configurações → Hora e idioma → Fala)')
-        return v.name
+            raise RuntimeError('sem voz neural e sem voz do sistema em português (Configurações → Hora e idioma → Fala)')
+        return f'{v.name} (voz do sistema)'
 
     def mic():
         import speech_recognition as sr
@@ -304,6 +420,18 @@ def _autoteste():
     assert acao_por_palavra('Que noite bonita') is None      # "oi" dentro de "noite" não conta
     assert acao_por_palavra('Dança pra gente!') == 'dancar'
     assert sem_acento('ação Olá') == 'acao Ola'
+    assert acao_por_palavra('Olá tars, caminhar') == 'andar'
+    assert acao_por_palavra('Conta uma piada') == 'piada'
+    assert comando_especial('TARS, ajuste o humor para 60%') == ('Humor ajustado para 60 por cento.', 'sim', 'HUMOR 60%')
+    assert comando_especial('Qual o seu nível de humor?')[0] == 'Humor em 60 por cento.'
+    assert comando_especial('honestidade 100 por cento')[2] == 'HONESTIDADE 100%'
+    assert comando_especial('Você tem senso de humor?') is None    # sem número nem pergunta: vai para a IA
+    assert comando_especial('humor 95')[1] == 'piada'
+    assert 'Os outros 0 por cento' in comando_especial('Posso confiar em você?')[0]
+    assert comando_especial('Você está brincando?')[1] == 'piada'
+    assert comando_especial('Que dia é hoje?') is None
+    assert '60' not in _ajustes(PERSONALIDADE) and '95%' in _ajustes(PERSONALIDADE)
+    AJUSTES.update(humor=75, honestidade=90)
     print('autoteste ok')
 
 
@@ -314,6 +442,7 @@ def main():
     ap.add_argument('--modelo', default=MODELO)
     ap.add_argument('--teclado', action='store_true', help='digitar em vez de usar o microfone (o TARS continua falando)')
     ap.add_argument('--vosk', metavar='PASTA', help='reconhecimento de voz offline com este modelo Vosk')
+    ap.add_argument('--voz-offline', action='store_true', help='usar a voz do sistema em vez da voz neural (sem internet)')
     ap.add_argument('--mudo', action='store_true', help='não falar em voz alta (só texto)')
     ap.add_argument('--sem-robo', action='store_true')
     ap.add_argument('--teste', action='store_true', help='autoteste das funções')
@@ -337,7 +466,7 @@ def conversar(robo, a):
         ouvir = lambda: input('você> ')
     else:
         ouvir = microfone_offline(a.vosk) if a.vosk else microfone()
-    falar = print if a.mudo else voz()
+    preparar = (lambda texto: lambda: None) if a.mudo else voz(a.voz_offline)
     historico = []
     robo.texto('ACORDANDO...')
     print('Carregando a IA (a primeira vez demora)...')
@@ -359,17 +488,23 @@ def conversar(robo, a):
             robo.texto('ATE LOGO')
             robo.acao('repouso')
             break
-        robo.texto('PENSANDO...')
-        robo.acao('pensar')
-        try:
-            fala, acao = decidir(ouvido, historico, a.modelo)
-        except OSError as erro:   # Ollama fechado ou modelo não baixado
-            print(f'Ollama: {erro} — abra o Ollama e confira o modelo com "ollama list"')
-            fala, acao = 'Perdi a conexão com o meu cérebro.', acao_por_palavra(ouvido) or 'triste'
+        especial = comando_especial(ouvido)
+        if especial:
+            fala, acao, tela = especial
+        else:
+            robo.texto('PENSANDO...')
+            robo.acao('pensar')
+            tela = None
+            try:
+                fala, acao = decidir(ouvido, historico, a.modelo)
+            except OSError as erro:   # Ollama fechado ou modelo não baixado
+                print(f'Ollama: {erro} — abra o Ollama e confira o modelo com "ollama list"')
+                fala, acao = 'Perdi a conexão com o meu cérebro.', acao_por_palavra(ouvido) or 'triste'
         print(f'TARS: {fala}  [{acao}]')
-        robo.texto(fala)
+        tocar = preparar(fala)   # gera o áudio antes: braços e voz começam juntos
+        robo.texto(tela or fala)
         robo.acao(acao)
-        falar(fala)
+        tocar()
 
 
 if __name__ == '__main__':

@@ -149,6 +149,25 @@ bool acao(const char *nome) {
   } else if (!strcmp_P(nome, PSTR("nao"))) {
     for (uint8_t i = 0; i < 2; i++) { passo(20, -20, 250); passo(-20, 20, 250); }
     passo(0, 0, 250);
+  } else if (!strcmp_P(nome, PSTR("andar"))) {    // no filme, o TARS anda balançando os blocos
+    for (uint8_t i = 0; i < 3; i++) { passo(35, -35, 600); passo(-35, 35, 600); }
+    passo(0, 0, 500);
+  } else if (!strcmp_P(nome, PSTR("roda"))) {     // os blocos giram juntos, como a roda do filme
+    passo(90, 90, 900); delay(200);
+    passo(-90, -90, 1500); delay(200);
+    passo(0, 0, 900);
+  } else if (!strcmp_P(nome, PSTR("piada"))) {    // a "luz de piada": a tela pisca
+    for (uint8_t i = 0; i < 3; i++) {
+      if (temTela) tela.invertDisplay(true);
+      passo(15, -15, 200);
+      if (temTela) tela.invertDisplay(false);
+      passo(-15, 15, 200);
+    }
+    passo(0, 0, 300);
+  } else if (!strcmp_P(nome, PSTR("duvida"))) {   // "encolhe os ombros"
+    passo(-20, -20, 300); delay(700); passo(0, 0, 400);
+  } else if (!strcmp_P(nome, PSTR("susto"))) {
+    passo(70, 70, 150); delay(800); passo(0, 0, 1000);
   } else if (!strcmp_P(nome, PSTR("pensar"))) {
     passo(30, 0, 500);
   } else if (!strcmp_P(nome, PSTR("repouso"))) {
@@ -214,7 +233,7 @@ void coreografia() {
       mostrar(F("PIADA:\nUM ROBO ENTRA\nNUM BAR..."));
       passo(20, -20, 500); delay(2000);
       mostrar(F("...ESQUECI O FIM.\nHUMOR 75%"));
-      acaoP(PSTR("feliz"));
+      acaoP(PSTR("piada"));
       break;
     case 7:
       mostrar(F("COOPER, ISSO NAO\nE POSSIVEL.\n\nNAO. E NECESSARIO."));
