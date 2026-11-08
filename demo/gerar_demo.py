@@ -25,6 +25,8 @@ dados = dict(
     pecas=pecas,
     comprados=[dict(nome=c['nome'], grupo=c['grupo'], solidos=c['solidos'], inst=c['inst']) for c in P.COMPRADOS],
     verificacoes=P.verificar(),
+    sensor=dict(x=P.US_X, z=P.US_Z, y=round(-P.SD / 2 + P.T + P.HCSR04['afastamento'] - P.HCSR04['alt_transdutor'], 2),
+                angulo=P.HCSR04['angulo_cone'], alcance=600, marcas=[200, 400]),
     resumo=dict(massa=round(r['massa']), largura=round(2 * (P.CX_BRACO + P.SW / 2)), altura=round(P.H + P.T),
                 profundidade=round(P.SD), fs=round(P.SG90['torque_kgcm'] / r['torque'], 1)),
 )

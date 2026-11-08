@@ -67,7 +67,7 @@ button.principal { background: var(--accent); border-color: var(--accent); color
   <aside class="painel">
     <header>
       <h1>Robô TARS</h1>
-      <p class="sub">4 blocos de MDF 3 mm cortados a laser · 2 braços com micro servo SG90 · tela OLED · geometria lida de projeto.py</p>
+      <p class="sub">4 blocos de MDF 3 mm cortados a laser · 2 braços com micro servo SG90 · tela OLED · sensor ultrassônico HC-SR04 · geometria lida de projeto.py</p>
     </header>
 
     <section>
@@ -89,13 +89,16 @@ button.principal { background: var(--accent); border-color: var(--accent); color
         <select id="acabamento"><option value="mdf">MDF natural</option><option value="tars">Pintado (TARS)</option></select></div>
       <div class="linha"><label for="explodir">Vista explodida</label><input id="explodir" type="range" min="0" max="1" step="0.01" value="0"></div>
       <div class="linha"><label for="transp">Ver por dentro</label><input id="transp" type="checkbox"></div>
-      <div class="botoes"><button id="camera" type="button">Recentrar câmera</button></div>
+      <div class="linha"><label for="cone">Alcance do sensor</label><input id="cone" type="checkbox" checked></div>
+      <div class="botoes"><button id="camera" type="button">Recentrar câmera</button>
+        <button id="focoSensor" type="button">Focar no sensor</button></div>
       <div class="legenda" style="margin-top:12px">
         <span><i style="background:#c9a77c"></i>MDF</span>
         <span><i style="background:#3a6fd8"></i>SG90</span>
         <span><i style="background:#11808a"></i>Arduino Uno</span>
         <span><i style="background:#2f3f8f"></i>PCA9685</span>
         <span><i style="background:#0d0f12"></i>OLED</span>
+        <span><i style="background:#1d5bb5"></i>HC-SR04</span>
       </div>
     </section>
 
@@ -165,6 +168,8 @@ const mat = {
   'Arduino Uno': new THREE.MeshStandardMaterial({ color: 0x11808a, roughness: 0.6 }),
   'PCA9685': new THREE.MeshStandardMaterial({ color: 0x2f3f8f, roughness: 0.6 }),
   'OLED SSD1306': new THREE.MeshStandardMaterial({ color: 0x0d0f12, roughness: 0.4 }),
+  'Sensor HC-SR04': new THREE.MeshStandardMaterial({ color: 0x1d5bb5, roughness: 0.5 }),
+  transdutor: new THREE.MeshStandardMaterial({ color: 0xd7dbe0, metalness: 0.25, roughness: 0.45 }),
 };
 const ACABAMENTOS = {
   mdf: { tronco: 0xc9a77c, braco: 0xd0ae86, aresta: 0x5e3d22, vinco: 0x4a2f1a, metal: 0, rough: 0.85 },
@@ -194,7 +199,7 @@ const EXPLODE = {
   'Horn SG90': [90, 0, 0], 'Braço lateral interna': [70, 0, 0], 'Anteparo do horn': [100, 0, 0],
   'Braço frente/trás': [110, 30, 0], 'Braço topo/fundo': [110, 0, 0], 'Reforço do braço': [110, 15, 0],
   'Braço lateral externa (tampa)': [150, 0, 0], 'Arduino Uno': [0, 0, 35], 'PCA9685': [-15, 0, 0],
-  'OLED SSD1306': [0, 30, 0],
+  'OLED SSD1306': [0, 30, 0], 'Sensor HC-SR04': [0, 45, 0],
 };
 const pecas3d = [];
 function registrar(obj, nome, inst) {
@@ -251,7 +256,8 @@ for (const c of D.comprados) {
         m.position.set(...s[1]);
       } else {
         const [a, b, r] = [s[1], s[2], s[3]];
-        m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, Math.abs(b[2] - a[2]), 32), mat[c.nome]);
+        m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, Math.abs(b[2] - a[2]), 32),
+                           c.nome === 'Sensor HC-SR04' ? mat.transdutor : mat[c.nome]);
         m.rotation.x = Math.PI / 2;
         m.position.set(a[0], a[1], (a[2] + b[2]) / 2);
       }
@@ -266,6 +272,29 @@ for (const c of D.comprados) {
     registrar(obj, c.nome, inst);
   }
 }
+
+// alcance do sensor ultrassônico: cone de abertura nominal, saindo da frente dos transdutores
+let cone = null;
+if (D.sensor) {
+  const S = D.sensor, L = S.alcance, r = L * Math.tan(THREE.MathUtils.degToRad(S.angulo));
+  const geo = new THREE.ConeGeometry(r, L, 48, 1, true);
+  geo.translate(0, -L / 2, 0);                 // ponta na origem, abrindo para −Y (frente)
+  cone = new THREE.Group();
+  const mCone = new THREE.MeshBasicMaterial({ color: 0x2f9e8f, transparent: true, opacity: 0.14, side: THREE.DoubleSide, depthWrite: false });
+  cone.add(new THREE.Mesh(geo, mCone));
+  cone.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 30), new THREE.LineBasicMaterial({ color: 0x2f9e8f, transparent: true, opacity: 0.5 })));
+  for (const d of S.marcas) {                  // anéis de distância (mm)
+    const anel = new THREE.Mesh(new THREE.TorusGeometry(d * Math.tan(THREE.MathUtils.degToRad(S.angulo)), 0.8, 6, 64),
+                                new THREE.MeshBasicMaterial({ color: 0x2f9e8f }));
+    anel.rotation.x = Math.PI / 2; anel.position.y = -d; cone.add(anel);
+  }
+  cone.position.set(S.x, S.y, S.z);
+  cena.add(cone);
+  $('cone').addEventListener('change', e => { cone.visible = e.target.checked; });
+  $('focoSensor').addEventListener('click', () => {
+    camera.position.set(S.x + 900, S.y - 260, S.z + 300); controles.target.set(S.x, S.y - 170, S.z - 40); controles.update();
+  });
+} else { $('cone').closest('.linha').hidden = true; $('focoSensor').hidden = true; }
 
 // ── braços e poses ──────────────────────────────────────────────────────
 const JUNTAS = [{ nome: 'Braço D', lado: 'D' }, { nome: 'Braço E', lado: 'E' }];

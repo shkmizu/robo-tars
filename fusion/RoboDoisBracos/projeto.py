@@ -96,6 +96,15 @@ PCA9685 = dict(comp=62.5, larg=25.4, alt_comp=11.0, usb_saliencia=0.0, massa_g=9
 # OLED 0,96" SSD1306 I²C: placa de 27–30 mm conforme o fabricante; colada atrás da janela.
 OLED = dict(placa=(27.0, 27.5, 4.0), janela=(23.0, 12.0), massa_g=5.0)
 OLED_X, OLED_Z = SW / 2, H - 70.0  # centro da tela: bloco D do corpo, perto do topo
+# Sensor ultrassônico HC-SR04 (GS CitizenTech): placa de 45 × 20 mm com 2 transdutores Ø16 a ±13 mm
+# do centro; o cristal fica na frente da placa, entre eles (~4 mm), por isso a placa fica afastada
+# da chapa e os "olhos" passam por 2 furos e aparecem ~4 mm para fora. Pinos em ângulo, para baixo.
+# Medidas típicas de anúncios (varia entre fabricantes): confira com paquímetro antes de furar.
+HCSR04 = dict(placa=(45.0, 20.0, 1.6), d_transdutor=16.0, alt_transdutor=12.0, dx_transdutor=13.0,
+              afastamento=4.5, comp_traseira=(30.0, 12.0, 3.0), conector=(10.2, 22.0, 3.0),
+              angulo_cone=15.0, massa_g=9.0)
+FURO_ULTRASSOM = HCSR04['d_transdutor'] + 0.6
+US_X, US_Z = 0.0, 190.0            # centro do sensor: no meio da frente, abaixo da tela (vinco entre os olhos)
 
 # ─── Posições derivadas (lado D; o lado E é o D girado 180° em torno de Z) ──────────
 # Braço com o eixo no meio: o canto de baixo gira num raio que não pode alcançar a mesa.
@@ -281,8 +290,9 @@ def _deslocar(geo, dy):
 def g_corpo_frente(kerf, folga):
     """Local: x = X, y = Z, vista de fora."""
     return [contorno_dedos(-SW, 0, SW, H, DONOS_FT, kerf=kerf, folga=folga),
-            retangulo(OLED_X, OLED_Z, *OLED['janela']),
-            ('grav', (0, T), (0, H - T))]
+            retangulo(OLED_X, OLED_Z, *OLED['janela'])] + \
+        [circulo(US_X + sx * HCSR04['dx_transdutor'], US_Z, FURO_ULTRASSOM) for sx in (-1, 1)] + \
+        [('grav', (0, T), (0, H - T))]
 
 
 def g_corpo_tras(kerf, folga):
@@ -467,6 +477,21 @@ def _cm_placa(p):
     return (p['comp'] / 2, p['larg'] / 2, ESPACADOR_ELETRONICA + 5)
 
 
+def _solidos_hcsr04(u):
+    """Referencial: origem na face de dentro da frente, z para dentro do corpo, y para baixo."""
+    a, (pl, pa, pe) = u['afastamento'], u['placa']
+    tl, ta, te = u['comp_traseira']
+    cl, ca, ce = u['conector']
+    return ([('caixa', (0, 0, a + pe / 2), (pl, pa, pe)),
+             ('caixa', (0, 0, a + pe + te / 2), (tl, ta, te)),
+             ('caixa', (0, pa / 2 + ca / 2, a + pe / 2), (cl, ca, ce))]   # pinos em ângulo + jumpers
+            + [('cil', (sx * u['dx_transdutor'], 0, a), (sx * u['dx_transdutor'], 0, a - u['alt_transdutor']),
+                u['d_transdutor'] / 2) for sx in (-1, 1)])
+
+
+INST_US = ((US_X, -SD / 2 + T, US_Z), X_, Y_)
+
+
 # SG90 em pé dentro do corpo: eixo de saída para fora (+X), corpo descendo a partir do eixo
 INST_SERVO = ((X_SERVO, OMBRO_Y, OMBRO_Z), BAIXO, X_)
 _HORN_Z0 = SG90['alt_eixo'] + SG90['horn_acima'] - SG90['horn_alt']
@@ -483,6 +508,8 @@ COMPRADOS = [
          massa=PCA9685['massa_g'], cm=_cm_placa(PCA9685), inst=[INST_PCA]),
     dict(nome='OLED SSD1306', solidos=[('caixa', (0, 0, OLED['placa'][2] / 2), OLED['placa'])],
          grupo='tronco', massa=OLED['massa_g'], cm=(0, 0, 2), inst=[((OLED_X, -SD / 2 + T, OLED_Z), X_, Y_)]),
+    dict(nome='Sensor HC-SR04', solidos=_solidos_hcsr04(HCSR04), grupo='tronco', massa=HCSR04['massa_g'],
+         cm=(0, 0, HCSR04['afastamento']), inst=[INST_US]),
 ]
 
 
@@ -502,6 +529,8 @@ def ligacoes():
     pca_borne = _pt(INST_PCA, (PCA9685['comp'] / 2, 2, ESPACADOR_ELETRONICA + 8))
     uno_i2c = _pt(INST_UNO, (64.0, 2.5, zc))                    # A4/A5 + 5V/GND na borda de baixo
     oled_pinos = _pt(COMPRADOS[4]['inst'][0], (0, 12.0, 4))
+    us_pinos = _pt(INST_US, (0, HCSR04['placa'][1] / 2 + HCSR04['conector'][1], HCSR04['afastamento']))
+    uno_d7_d8 = _pt(INST_UNO, (42.0, UNO['larg'] - 2.5, zc))   # barra digital, na borda oposta
     entrada = (OLED_X, SD / 2 - T, 60.0)
     chave = (OLED_X, SD / 2 - T, 95.0)
     s1, s2 = (saida_servo(i) for i in _par(INST_SERVO))
@@ -512,6 +541,7 @@ def ligacoes():
         ('PCA9685 → OLED SDA/SCL/VCC/GND (jumper fêmea-fêmea 30 cm)', pca_ctrl_cima, oled_pinos, 300.0),
         ('Plugue da fonte → chave (fio 22 AWG 30 cm)', entrada, chave, 300.0),
         ('Chave → borne V+ do PCA9685 (fio 22 AWG 30 cm)', chave, pca_borne, 300.0),
+        ('Sensor HC-SR04 → Uno 5V/GND/D7/D8 (jumper fêmea-macho 30 cm)', us_pinos, uno_d7_d8, 300.0),
     ]
 
 
@@ -656,6 +686,21 @@ def verificar():
     # pinos do OLED saem ~23 mm para trás (pino + conector): não podem alcançar o SG90 D
     oled_ok = OLED_X + OLED['janela'][0] / 2 <= SW - T - PONTE_MIN and \
         (OLED_Z - OLED['placa'][1] / 2 > z_servo[1] or -SD / 2 + T + 4 + 23 < -s['larg'] / 2)
+    # sensor ultrassônico: furos com ponte de MDF até as bordas e entre si; placa abaixo da tela, longe
+    # dos SG90 (separação em Y) e acima do PCA9685; o braço girando não entra no cone do sensor
+    u = HCSR04
+    r_furo = FURO_ULTRASSOM / 2
+    us_ponte = min(SW - T - (abs(US_X) + u['dx_transdutor'] + r_furo),
+                   2 * u['dx_transdutor'] - 2 * r_furo,
+                   OLED_Z - OLED['janela'][1] / 2 - (US_Z + r_furo))
+    us_fundo_y = -SD / 2 + T + u['afastamento'] + u['placa'][2] + u['comp_traseira'][2]
+    us_z = (US_Z - u['placa'][1] / 2 - u['conector'][1], US_Z + u['placa'][1] / 2)
+    us_ok = (us_ponte >= PONTE_MIN and abs(US_X) + u['placa'][0] / 2 <= SW - T
+             and us_z[1] < OLED_Z - OLED['placa'][1] / 2 and us_z[0] > z_pca[1]
+             and (us_z[0] > z_servo[1] or us_fundo_y + 5 < -s['larg'] / 2))
+    frente_us = -SD / 2 + T + u['afastamento'] - u['alt_transdutor']
+    alcance_braco = math.hypot(SD / 2, max(OMBRO_Z - Z_BRACO, H - OMBRO_Z)) + frente_us   # à frente do sensor
+    cone_ok = X_BRACO > alcance_braco * math.tan(math.radians(u['angulo_cone']))
     ref_ok = all(not (z_servo[0] - REFORCO[1] / 2 < z < z_servo[1] + REFORCO[1] / 2) or y_ref[0] > s['larg'] / 2
                  for z in Z_TAMPA_CORPO)
     cabos = []
@@ -684,6 +729,11 @@ def verificar():
         (uno_ok and pca_ok, 'Uno deitado (com jumpers) e PCA9685 em pé cabem sem tocar SG90 nem reforços'),
         (oled_ok, 'Janela da tela longe dos encaixes; pinos/conectores do OLED não alcançam o SG90'),
         (ref_ok, 'Reforços da tampa traseira não tocam os SG90'),
+        (us_ok, f'Sensor HC-SR04: 2 furos Ø{FURO_ULTRASSOM:g} na frente (ponte {us_ponte:.1f} mm); placa não toca '
+                f'tela, SG90 nem PCA9685 (fica {-s["larg"] / 2 - us_fundo_y:.0f} mm à frente dos servos)'),
+        (cone_ok, f'Braço girando fica fora do cone de {HCSR04["angulo_cone"]:g}° do sensor: chega a '
+                  f'{alcance_braco:.0f} mm à frente, onde o cone tem {alcance_braco * math.tan(math.radians(HCSR04["angulo_cone"])):.0f} mm '
+                  f'de raio, e o braço está a {X_BRACO:g} mm do centro'),
     ]
     out += [(ok, f'Cabo {desc}: precisa ~{p:.0f} mm, tem {c:.0f} mm') for ok, desc, p, c in cabos]
     out.append((not grandes, f'Todas as peças cabem na chapa {CHAPA[0]:g}×{CHAPA[1]:g}' +
@@ -707,6 +757,8 @@ def lista_materiais():
         ('Eletrônica', 'Chave gangorra KCD1 (2 pinos)', 1, f'recorte {CHAVE_RECORTE[0]:g}×{CHAVE_RECORTE[1]:g} mm'),
         ('Eletrônica', 'Módulo Bluetooth HC-05', 1, 'comandos da IA sem fio (D10/D11)'),
         ('Eletrônica', 'Resistores 1 kΩ e 2 kΩ', '1 + 1', 'divisor de tensão no RXD do HC-05'),
+        ('Eletrônica', 'Sensor ultrassônico HC-SR04', 1, f'GS CitizenTech: 2 furos Ø{FURO_ULTRASSOM:g} na frente; D7/D8'),
+        ('Eletrônica', 'Jumper fêmea-macho 30 cm', 4, 'HC-SR04 ↔ Uno (20 cm não alcança)'),
         ('Eletrônica', 'Jumper macho-fêmea 20 cm', 8, 'Uno ↔ PCA9685 e Uno ↔ HC-05'),
         ('Eletrônica', 'Jumper fêmea-fêmea 30 cm', 4, 'PCA9685 ↔ OLED (20 cm não alcança)'),
         ('Eletrônica', 'Fio 22 AWG vermelho e preto', '1 m', 'fonte → chave → PCA9685'),

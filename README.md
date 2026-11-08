@@ -151,18 +151,24 @@ OK  Topo do SG90 cabe na janela do disco de encosto e o ressalto no furo Ø20 do
 OK  Horn e anteparo ficam dentro do braço (horn a 1.9 mm da lateral interna)
 OK  Braço ↔ mesa em qualquer ângulo: 3.1 mm (mín. 3.0)
 OK  Ombro: desequilíbrio 0.00 + aceleração 0.16 + atrito 0.12 = 0.28 kgf·cm; SG90 dá 1.8 → FS 6.3
-OK  Centro de massa ↔ borda da base na pior pose: 36 mm (massa total 691 g)
+OK  Centro de massa ↔ borda da base na pior pose: 36 mm (massa total 699 g)
 OK  Uno deitado (com jumpers) e PCA9685 em pé cabem sem tocar SG90 nem reforços
 OK  Janela da tela longe dos encaixes; pinos/conectores do OLED não alcançam o SG90
 OK  Reforços da tampa traseira não tocam os SG90
+OK  Sensor HC-SR04: 2 furos Ø16.6 na frente (ponte 9.4 mm); placa não toca tela, SG90 nem PCA9685 (fica 24 mm à frente dos servos)
+OK  Braço girando fica fora do cone de 15° do sensor: chega a 106 mm à frente, onde o cone tem 29 mm de raio, e o braço está a 39 mm do centro
 OK  Cabo SG90 D → PCA9685 canal 0 (cabo do servo): precisa ~196 mm, tem 250 mm
 OK  Cabo SG90 E → PCA9685 canal 1 (cabo do servo): precisa ~165 mm, tem 250 mm
 OK  Cabo Uno A4/A5/5V/GND → PCA9685 (jumper macho-fêmea 20 cm): precisa ~80 mm, tem 200 mm
 OK  Cabo PCA9685 → OLED SDA/SCL/VCC/GND (jumper fêmea-fêmea 30 cm): precisa ~225 mm, tem 300 mm
 OK  Cabo Plugue da fonte → chave (fio 22 AWG 30 cm): precisa ~72 mm, tem 300 mm
 OK  Cabo Chave → borne V+ do PCA9685 (fio 22 AWG 30 cm): precisa ~157 mm, tem 300 mm
+OK  Cabo Sensor HC-SR04 → Uno 5V/GND/D7/D8 (jumper fêmea-macho 30 cm): precisa ~250 mm, tem 300 mm
 OK  Todas as peças cabem na chapa 900×600
 ```
+
+**Sensor ultrassônico (GS CitizenTech):** o HC-SR04 fica no meio da frente, abaixo da tela (centro a Z = 190 mm), com os 2 transdutores passando por furos de Ø16,6 mm, um de cada lado do vinco. A placa fica ~4,5 mm atrás da chapa, por causa do cristal entre os transdutores, e os "olhos" aparecem ~4 mm para fora. As verificações acima conferem que ele não toca a tela, os servos nem o PCA9685, e que o braço girando não entra no cone do sensor. No robô já montado, os furos podem ser feitos com uma serra-copo de 16 mm ou uma broca escalonada; o DXF da frente (`laser/pecas/02_Corpo_frente_x1.dxf`) já tem os furos, para quem for cortar de novo.
+
 **Como os cabos são verificados:** o comprimento é estimado pelo caminho em "L" entre os conectores, mais 20%, mais 30 mm de sobra. Foi assim que apareceu que o **jumper de 20 cm não chega ao OLED**, e por isso a lista pede jumpers de 30 cm.
 
 ## Montagem
