@@ -1,5 +1,16 @@
 # Robô TARS
 
+> ## GS CitizenTech 2026.2: TARS Totem BairroVivo
+> O TARS evoluiu para um **totem de atendimento do BairroVivo**:
+> - um **sensor ultrassônico** e um **modelo de IA embarcado** percebem quem se aproxima;
+> - a **IA local** conversa por voz e registra problemas do bairro na API da plataforma;
+> - sem o computador, o robô decide sozinho.
+>
+> **Documentação da GS (instalação, componentes, integração sensor + IA, testes e vídeo): [CITIZENTECH.md](CITIZENTECH.md)**
+>
+> **Integrantes:** _(preencher: nome completo e RM de todos, obrigatório)_ · **Vídeo:** _(link do YouTube)_
+
+
 Robô de mesa inspirado no TARS, de *Interestelar*. São 4 blocos de MDF lado a lado, como no filme: os 2 do meio formam o corpo e os 2 de fora são os braços, cada um movido por um micro servo. Uma tela OLED na frente mostra o que ele está pensando e falando.
 
 O TARS conversa por voz:
@@ -45,6 +56,7 @@ A voz é gerada **antes** de o gesto ser enviado, para os braços e a fala come�
 
 | Pasta / arquivo | O que é |
 |---|---|
+| [`CITIZENTECH.md`](CITIZENTECH.md) | **GS CitizenTech**: o totem do BairroVivo com o sensor ultrassônico |
 | [`versao_final/`](versao_final/README.md) | **código da apresentação**: `arduino/tars_ia/tars_ia.ino` (Arduino) e `ia/tars.py` com os `.bat` de clique duplo (notebook, Windows) |
 | [`APRESENTACAO.md`](APRESENTACAO.md) | texto para explicar o projeto, dividido por apresentador |
 | [`CP5.md`](CP5.md) | critérios da avaliação, roteiro de 10 min, frases da demonstração, plano B |
@@ -64,6 +76,7 @@ A voz é gerada **antes** de o gesto ser enviado, para os braços e a fala come�
 | PCA9685 (endereço I²C 0x40) | gera o sinal dos servos e distribui a energia das pilhas para eles |
 | 2 × micro servo SG90 | um em cada braço, de −90° a +90° |
 | OLED 0,96" SSD1306 (I²C 0x3C) | mostra o estado, as respostas e a "luz de piada" |
+| Sensor ultrassônico HC-SR04 (GS) | percebe quem chega, quem sai e objetos parados na frente (Trig D7, Echo D8) |
 | 4 pilhas AA alcalinas (6 V) no suporte | movem os servos e alimentam o Uno pelo Vin |
 | Notebook Windows | microfone, IA (Ollama), voz e alto-falante |
 | Corpo em MDF 3 mm, corte a laser | 37 peças, 303 × 150 × 84 mm, cerca de 690 g |
@@ -77,6 +90,7 @@ A voz é gerada **antes** de o gesto ser enviado, para os braços e a fala come�
 | Servo do braço direito / esquerdo | PCA9685 **canal 0 / 1** (fio marrom na fileira GND) |
 | Pilhas **+ / −** | **borne verde V+ / GND** do PCA9685 (se os servos não mexem, confira a polaridade) |
 | Borne **V+** | Uno **Vin** (jumper) |
+| HC-SR04 **VCC / GND / Trig / Echo** | Uno **5V / GND / D7 / D8** (GS) |
 | Cabo USB do notebook | USB do Uno (janela da tampa traseira) |
 
 ❌ Nunca ligue as pilhas no pino **5V** do Uno. O HC-05 (Bluetooth) é opcional: o projeto usa o cabo USB. As ligações do HC-05 estão em [versao_final/README.md](versao_final/README.md#bluetooth-opcional).
@@ -186,4 +200,5 @@ O guia completo, com checklist, está em [MONTAGEM.md](MONTAGEM.md). O roteiro d
 
 - [ ] **Braço com folga:** prender o horn no eixo com o parafuso pequeno do SG90 e o braço no horn. Se faltarem os discos do mancal, usar um anel de papelão ou EVA entre o braço e o corpo (veja [MONTAGEM.md](MONTAGEM.md#problemas-comuns)).
 - [ ] **Calibração** dos dois servos (`us0` / `us90`).
+- [ ] **GS:** instalar o HC-SR04 (D7/D8), gravar dados reais com `presenca.py gravar`, retreinar e preencher os testes no hardware de [CITIZENTECH.md](CITIZENTECH.md#10-testes).
 - [ ] **Ensaio da apresentação** na sala, com `3_diagnostico.bat` sem nenhuma FALHA.

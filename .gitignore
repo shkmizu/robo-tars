@@ -14,3 +14,8 @@ laser/*.zip
 versao_final/ia/voz.txt
 versao_final/ia/elevenlabs_chave.txt
 versao_final/ia/elevenlabs_chave.txt.txt
+versao_final/ia/bairrovivo_chave.txt
+versao_final/ia/bairrovivo_config.json
+versao_final/ia/fila_bairrovivo.json
+versao_final/ia/fila_bairrovivo.json.tmp
+versao_final/ia/api_simulada_dados.json

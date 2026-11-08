@@ -8,6 +8,8 @@ Uso (no Windows, os .bat desta pasta já rodam estes comandos):
   python tars.py --porta auto --baud 115200 --diagnostico   confere tudo antes de apresentar
   python tars.py --porta auto --baud 115200                 conversa por voz (apresentação)
   python tars.py --escolher-voz                             ouvir e escolher a voz do TARS
+  python tars.py --totem --porta auto --baud 115200         GS CitizenTech: totem do BairroVivo (totem.py)
+  python tars.py --totem --sem-robo --teclado               totem sem robô; simule o sensor com /chegou, /saiu…
   python tars.py --porta COM5                               robô pelo Bluetooth (a porta "de saída" do HC-05)
   python tars.py --sem-robo --teclado                       sem robô: mostra os comandos que seriam enviados
   python tars.py --teste                                    autoteste (não precisa de microfone, Ollama nem robô)
@@ -19,7 +21,7 @@ Para usar dentro do script do CP4:
   fala, acao = decidir(texto_reconhecido, historico)
   robo.texto(fala); robo.acao(acao)        # depois o script do CP4 fala `fala` como já faz
 """
-import argparse, json, os, re, time, unicodedata, urllib.error, urllib.request
+import argparse, json, os, queue, re, threading, time, unicodedata, urllib.error, urllib.request
 
 MODELO = 'llama3.2:3b'      # troque pelo modelo que vocês usam (veja com: ollama list)
 OLLAMA = 'http://localhost:11434/api/chat'
@@ -121,11 +123,12 @@ def interpretar(resposta):
     return fala or '...', acao if acao in ACOES else 'repouso'
 
 
-def perguntar_llm(historico, modelo=MODELO):
+def perguntar_llm(historico, modelo=MODELO, sistema=None, timeout=120):
+    sistema = _ajustes(PERSONALIDADE) if sistema is None else sistema
     corpo = json.dumps({'model': modelo, 'stream': False, 'format': 'json', 'keep_alive': '60m',  # não descarrega
-                        'messages': [{'role': 'system', 'content': _ajustes(PERSONALIDADE)}] + historico[-10:]}).encode()
+                        'messages': [{'role': 'system', 'content': sistema}] + historico[-10:]}).encode()
     req = urllib.request.Request(OLLAMA, corpo, {'Content-Type': 'application/json'})
-    with urllib.request.urlopen(req, timeout=120) as r:
+    with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read())['message']['content']
 
 
@@ -193,10 +196,16 @@ def encontrar_porta():
 
 
 class Robo:
-    """Manda comandos ao Arduino pelo Bluetooth (HC-05) ou USB. Sem porta: só imprime (modo de teste)."""
+    """Manda comandos ao Arduino pelo USB ou pelo Bluetooth (HC-05). Sem porta: só imprime (modo de teste).
+    Os eventos do sensor ultrassônico chegam em `eventos` (uma fila de dicts), lidos por uma thread.
+    Enquanto o programa roda, uma thread manda "p" a cada 3 s: se o computador cair, o Arduino percebe
+    em 10 s e volta a decidir sozinho."""
 
     def __init__(self, porta=None, baud=9600):
         self.serial, self.pendentes = None, 0
+        self.eventos = queue.Queue()
+        self._acks = queue.Queue()
+        self._escrita = threading.Lock()
         if porta == 'auto':
             porta = encontrar_porta()
             print(f'Robô encontrado na porta {porta}.')
@@ -204,20 +213,56 @@ class Robo:
             import serial  # pip install pyserial
             self.serial = serial.Serial(porta, baud, timeout=0.2)
             time.sleep(2)  # pelo USB o Uno reinicia ao abrir a porta
+            threading.Thread(target=self._ler, daemon=True).start()
+            threading.Thread(target=self._batimento, daemon=True).start()
+
+    def _ler(self):
+        while self.serial:
+            try:
+                linha = self.serial.readline().decode('ascii', 'ignore').strip()
+            except Exception as erro:   # cabo USB puxado
+                self.eventos.put({'ev': 'desconectado', 'erro': str(erro)})
+                return
+            if linha.startswith('{'):
+                try:
+                    self.eventos.put(json.loads(linha))
+                except ValueError:
+                    pass
+            elif linha.startswith(('ok', 'erro')):
+                self._acks.put(linha)
+
+    def _batimento(self):
+        while self.serial:
+            time.sleep(3)
+            self._escrever('p')
+
+    def _escrever(self, linha):
+        try:
+            with self._escrita:
+                self.serial.write((linha + '\n').encode('ascii', 'ignore'))
+            return True
+        except Exception as erro:
+            if self.serial:
+                print(f'[robô] perdi a conexão ({erro}); seguindo sem o robô')
+                self.eventos.put({'ev': 'desconectado', 'erro': str(erro)})
+            self.serial = None
+            return False
 
     def _esperar(self, prazo=15):
         """Espera os "ok" das ações em andamento: o Uno só guarda 64 bytes enquanto mexe os braços.
         Retorna False se o robô não respondeu (desligado ou Bluetooth caído)."""
         fim = time.time() + prazo
         while self.pendentes and time.time() < fim:
-            linha = self.serial.readline().decode('ascii', 'ignore').strip()
-            if linha.startswith(('ok', 'erro')):
-                self.pendentes -= 1
-                if linha.startswith('erro'):
-                    print(f'[robô] {linha}')
+            try:
+                linha = self._acks.get(timeout=max(0.05, fim - time.time()))
+            except queue.Empty:
+                break
+            self.pendentes -= 1
+            if linha.startswith('erro'):
+                print(f'[robô] {linha}')
         respondeu = self.pendentes == 0
         if not respondeu:
-            print('[robô] sem resposta: confira se está ligado e se o Bluetooth está conectado')
+            print('[robô] sem resposta: confira se está ligado e se o cabo/Bluetooth está conectado')
         self.pendentes = 0
         return respondeu
 
@@ -227,10 +272,10 @@ class Robo:
             print(f'[robô] {linha}')
             return
         self._esperar()
-        self.serial.write((linha + '\n').encode('ascii', 'ignore'))
-        self.pendentes += 1
-        if esperar:
-            self._esperar()
+        if self._escrever(linha):
+            self.pendentes += 1
+            if esperar:
+                self._esperar()
 
     def acao(self, nome):
         """Não espera terminar: o computador já pode falar enquanto o robô se mexe."""
@@ -243,6 +288,14 @@ class Robo:
     def texto(self, msg):
         self._enviar(f't {msg[:60]}', esperar=True)  # 't ' + 60 + Enter cabe nos 64 bytes do Uno
 
+    def pedir_estado_sensor(self):
+        """O Arduino responde com um evento {"ev":"estado",...} na fila `eventos`."""
+        self._enviar('s', esperar=True)
+
+    def leituras_brutas(self, ligado):
+        """Liga/desliga as leituras cruas do sensor (10 por segundo), para calibrar e gravar dados."""
+        self._enviar(f's {1 if ligado else 0}', esperar=True)
+
 
 def microfone():
     """Reconhecimento de voz (Google, precisa de internet). Se o CP4 usa outro, troquem aqui."""
@@ -251,9 +304,13 @@ def microfone():
     with mic as fonte:
         rec.adjust_for_ambient_noise(fonte, duration=1)
 
-    def ouvir():
+    def ouvir(timeout=None):
+        """Com timeout (s): devolve '' se ninguém começar a falar nesse tempo."""
         with mic as fonte:
-            audio = rec.listen(fonte, phrase_time_limit=8)
+            try:
+                audio = rec.listen(fonte, timeout=timeout, phrase_time_limit=8)
+            except sr.WaitTimeoutError:
+                return ''
         try:
             return rec.recognize_google(audio, language='pt-BR')
         except sr.UnknownValueError:
@@ -274,14 +331,16 @@ def microfone_offline(pasta_modelo):
                                      input=True, frames_per_buffer=4000)
     entrada.stop_stream()   # só escuta dentro de ouvir(): não ouve a própria voz do TARS
 
-    def ouvir():
+    def ouvir(timeout=None):
+        fim = time.time() + timeout if timeout else None
         entrada.start_stream()
         try:
-            while True:
+            while not fim or time.time() < fim:
                 if rec.AcceptWaveform(entrada.read(4000, exception_on_overflow=False)):
                     texto = json.loads(rec.Result()).get('text', '')
                     if texto:
                         return texto
+            return ''
         finally:
             entrada.stop_stream()
     return ouvir
@@ -652,20 +711,56 @@ def diagnostico(a):
             raise RuntimeError('nenhuma porta COM: o HC-05 está pareado?')
         return '; '.join(ps)
 
+    conexao = []
+
+    def conectar():   # a porta só abre uma vez: o robô e o sensor usam a mesma conexão
+        if not conexao:
+            conexao.append(Robo(a.porta, a.baud))
+        return conexao[0]
+
     def robo():
         if not a.porta:
             raise RuntimeError('rode com --porta COMx para testar o robô')
-        r = Robo(a.porta, a.baud)
+        r = conectar()
         r.texto('DIAGNOSTICO')
         r.acao('sim')
         if not r._esperar():
             raise RuntimeError(f'o robô não respondeu em {a.porta}')
         return f'respondeu em {a.porta} (deve ter mexido os braços)'
 
+    def sensor():
+        if not a.porta:
+            raise RuntimeError('rode com --porta para testar o sensor')
+        r = conectar()
+        r.pedir_estado_sensor()
+        fim = time.time() + 3
+        while time.time() < fim:
+            try:
+                ev = r.eventos.get(timeout=0.5)
+            except queue.Empty:
+                continue
+            if ev.get('ev') == 'estado':
+                if ev.get('estado') == 'falha':
+                    raise RuntimeError('o HC-SR04 não responde: confira Trig D7, Echo D8, 5V e GND')
+                return f'{ev.get("estado")} a {ev.get("d")} cm (0 = nada até 4 m)'
+        raise RuntimeError('o Arduino não mandou o estado do sensor: carregue o tars_ia.ino novo')
+
+    def api():
+        import bairrovivo
+        cfg = bairrovivo.carregar_config()
+        p = bairrovivo.Ponte(cfg, iniciar=False, avisar=lambda *_: None)
+        if not p.saude():
+            raise RuntimeError(f'{cfg["url"]} não respondeu (suba o backend ou "python api_simulada.py"); '
+                               f'o totem funciona e guarda na fila')
+        if not cfg.get('chave'):
+            raise RuntimeError('API no ar, mas falta a chave do dispositivo (bairrovivo_chave.txt)')
+        return f'{cfg["url"]} no ar; {p.pendentes()} envio(s) na fila'
+
     print('Diagnóstico do TARS')
     for nome, teste in [('Ollama', ollama), ('IA responde', ia), ('Voz em português', voz_pt),
                         ('Microfone', mic), ('Reconhecimento de voz', reconhecimento),
-                        ('Portas COM', portas), ('Robô', robo)]:
+                        ('Portas COM', portas), ('Robô', robo), ('Sensor ultrassônico', sensor),
+                        ('API BairroVivo', api)]:
         item(nome, teste)
     print('Tudo pronto para apresentar.' if not falhas else f'{falhas} item(ns) com FALHA: corrija antes de apresentar.')
 
@@ -710,6 +805,8 @@ def main():
     ap.add_argument('--teste', action='store_true', help='autoteste das funções')
     ap.add_argument('--escolher-voz', action='store_true', help='ouvir as vozes e escolher a do TARS')
     ap.add_argument('--diagnostico', action='store_true', help='confere Ollama, voz, microfone, internet e robô')
+    ap.add_argument('--totem', action='store_true', help='GS CitizenTech: totem do BairroVivo com o sensor ultrassônico')
+    ap.add_argument('--sem-sensor', action='store_true', help='totem sem o HC-SR04: atende quando alguém fala')
     a = ap.parse_args()
     if a.teste:
         return _autoteste()
@@ -720,7 +817,11 @@ def main():
 
     robo = Robo(None if a.sem_robo else a.porta, a.baud)
     try:
-        conversar(robo, a)
+        if a.totem:
+            import totem
+            totem.rodar(robo, a)
+        else:
+            conversar(robo, a)
     finally:   # também no Ctrl+C: o robô volta a se mexer sozinho
         robo.modo_autonomo(True)
 

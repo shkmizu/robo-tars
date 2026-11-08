@@ -15,6 +15,8 @@
 //   HC-05: +5V → 5V (ao lado do RES), GND → GND, TX → D10, RX ← D11 pelo divisor
 //     (D11 →1 kΩ→ RX →2 kΩ→ GND): o RX do HC-05 é de 3,3 V.
 //
+//   Sensor ultrassônico HC-SR04 (GS CitizenTech): VCC → 5V, GND → GND, Trig → D7, Echo → D8.
+//
 // Comandos (uma linha cada, terminada em Enter), pelo USB (115200) ou pelo Bluetooth (9600):
 //   a <ação>           saudar, dancar, feliz, triste, sim, nao, pensar, repouso,
 //                      andar, roda, piada (a tela pisca), duvida, susto
@@ -23,7 +25,12 @@
 //   u <canal> <us>     pulso bruto, para calibrar   (ex.: "u 0 1500")
 //   j <junta> <graus>  move um braço dentro dos limites (ex.: "j 0 45")
 //   d                  liga/desliga o modo autônomo (atalho para o Monitor Serial)
-// O robô responde "ok" quando termina (ou "erro ...").
+//   s                  estado do sensor agora | s 1 / s 0: liga/desliga as leituras brutas (10 por s)
+//   p                  "estou aqui" do computador (sem resposta). Depois do 1º, se ficar 10 s sem
+//                      nenhum comando, o robô entende que o computador caiu e volta ao modo autônomo.
+// O robô responde "ok" quando termina (ou "erro ..."). O sensor manda eventos em JSON, uma linha
+// cada: {"ev":"estado","estado":"presente","d":62,"conf":93} quando muda o que ele vê, e
+// {"ev":"leitura",...} a cada 5 s.
 
 // 1 = servos no PCA9685 (projeto original). 0 = servos direto no Uno, sem PCA9685:
 //   servo braço D: sinal → D9 | servo braço E: sinal → D6 | vermelho → 5V do Uno | marrom → GND.
@@ -39,6 +46,7 @@
 #endif
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "presenca.h"   // classificador treinado em versao_final/ia/presenca.py
 
 #if USAR_PCA9685
 Adafruit_PWMServoDriver pca(0x40);
@@ -114,14 +122,27 @@ void moverJunta(uint8_t i, float graus) {
 
 // Leva os braços até `alvo` em `ms` milissegundos com aceleração suave (smoothstep):
 // menos tranco nos encaixes de MDF e no horn.
+// O sensor continua lendo durante o movimento; se alguém chegar no meio da coreografia, ela para.
+void atualizarSensor();
+bool interromper = false;
+
+void esperar(unsigned long ms) {
+  unsigned long t0 = millis();
+  while (millis() - t0 < ms && !interromper) atualizarSensor();
+}
+
 void irPara(const float alvo[], int ms) {
   float inicio[N];
   memcpy(inicio, atual, sizeof(inicio));
   for (int t = 0; t <= ms; t += 20) {
+    if (interromper) return;
     float s = ms > 0 ? (float)t / ms : 1;
     s = s * s * (3 - 2 * s);
     for (uint8_t i = 0; i < N; i++) moverJunta(i, inicio[i] + (alvo[i] - inicio[i]) * s);
-    delay(20);
+    unsigned long t0 = millis();
+    atualizarSensor();
+    unsigned long gasto = millis() - t0;
+    if (gasto < 20) delay(20 - gasto);
   }
   for (uint8_t i = 0; i < N; i++) moverJunta(i, alvo[i]);
 }
@@ -145,7 +166,7 @@ bool acao(const char *nome) {
   } else if (!strcmp_P(nome, PSTR("feliz"))) {
     for (uint8_t i = 0; i < 2; i++) { passo(60, 60, 350); passo(0, 0, 350); }
   } else if (!strcmp_P(nome, PSTR("triste"))) {
-    passo(-25, -25, 1200); delay(800); passo(0, 0, 1200);
+    passo(-25, -25, 1200); esperar(800); passo(0, 0, 1200);
   } else if (!strcmp_P(nome, PSTR("sim"))) {
     for (uint8_t i = 0; i < 2; i++) { passo(25, 25, 250); passo(0, 0, 250); }
   } else if (!strcmp_P(nome, PSTR("nao"))) {
@@ -155,8 +176,8 @@ bool acao(const char *nome) {
     for (uint8_t i = 0; i < 3; i++) { passo(35, -35, 600); passo(-35, 35, 600); }
     passo(0, 0, 500);
   } else if (!strcmp_P(nome, PSTR("roda"))) {     // os blocos giram juntos, como a roda do filme
-    passo(90, 90, 900); delay(200);
-    passo(-90, -90, 1500); delay(200);
+    passo(90, 90, 900); esperar(200);
+    passo(-90, -90, 1500); esperar(200);
     passo(0, 0, 900);
   } else if (!strcmp_P(nome, PSTR("piada"))) {    // a "luz de piada": a tela pisca
     for (uint8_t i = 0; i < 3; i++) {
@@ -167,9 +188,9 @@ bool acao(const char *nome) {
     }
     passo(0, 0, 300);
   } else if (!strcmp_P(nome, PSTR("duvida"))) {   // "encolhe os ombros"
-    passo(-20, -20, 300); delay(700); passo(0, 0, 400);
+    passo(-20, -20, 300); esperar(700); passo(0, 0, 400);
   } else if (!strcmp_P(nome, PSTR("susto"))) {
-    passo(70, 70, 150); delay(800); passo(0, 0, 1000);
+    passo(70, 70, 150); esperar(800); passo(0, 0, 1000);
   } else if (!strcmp_P(nome, PSTR("pensar"))) {
     passo(30, 0, 500);
   } else if (!strcmp_P(nome, PSTR("repouso"))) {
@@ -206,15 +227,15 @@ void coreografia() {
   switch (cena++) {
     case 0:
       mostrar(F("HUMOR 75%\nHONESTIDADE 90%"));
-      passo(0, 0, 800); delay(2500);
+      passo(0, 0, 800); esperar(2500);
       break;
     case 1:
-      acaoP(PSTR("saudar")); delay(1000);
+      acaoP(PSTR("saudar")); esperar(1000);
       break;
     case 2:
       mostrar(F("ANALISANDO\nO AMBIENTE..."));
-      passo(30, 0, 600); delay(800);
-      passo(0, 30, 800); delay(800);
+      passo(30, 0, 600); esperar(800);
+      passo(0, 30, 800); esperar(800);
       passo(0, 0, 600);
       break;
     case 3:
@@ -224,37 +245,200 @@ void coreografia() {
       break;
     case 4:
       mostrar(F("MODO RODA"));
-      passo(90, 90, 1200); delay(400);
-      passo(-90, -90, 2000); delay(400);
+      passo(90, 90, 1200); esperar(400);
+      passo(-90, -90, 2000); esperar(400);
       passo(0, 0, 1200);
       break;
     case 5:
-      acaoP(PSTR("dancar")); delay(500);
+      acaoP(PSTR("dancar")); esperar(500);
       break;
     case 6:
       mostrar(F("PIADA:\nUM ROBO ENTRA\nNUM BAR..."));
-      passo(20, -20, 500); delay(2000);
+      passo(20, -20, 500); esperar(2000);
       mostrar(F("...ESQUECI O FIM.\nHUMOR 75%"));
       acaoP(PSTR("piada"));
       break;
     case 7:
       mostrar(F("COOPER, ISSO NAO\nE POSSIVEL.\n\nNAO. E NECESSARIO."));
-      passo(-25, -25, 1200); delay(2500);
+      passo(-25, -25, 1200); esperar(2500);
       passo(0, 0, 1200);
       break;
     case 8:
       mostrar(F("EM ESPERA"));
-      passo(0, 0, 700); delay(5000);
+      passo(0, 0, 700); esperar(5000);
       break;
     default:
       cena = 0;
   }
 }
 
+// ── Sensor ultrassônico HC-SR04 (GS CitizenTech) ─────────────────────────────────
+// 10 leituras por segundo; a cada leitura, o classificador (presenca.h) olha o último segundo e
+// diz se a frente está vazia, se alguém está chegando, parado na frente ou saindo. Uma mudança só
+// vale depois de CONFIRMAR classificações iguais seguidas (evita piscar com ruído). Duas regras
+// completam o modelo: "presente" sem mexer nem 2 cm por OBSTACULO_MS é um objeto (passagem
+// obstruída), e eco que nunca responde é sensor com falha (fio solto).
+const uint8_t PINO_TRIG = 7, PINO_ECHO = 8;
+const uint16_t SEM_ECO = 0, FALHA_SENSOR = 0xFFFF;
+const uint8_t CONFIRMAR = 3;
+const unsigned long OBSTACULO_MS = 20000;
+const unsigned long BATIMENTO_MS = 10000;   // sem notícias do computador por 10 s: decide sozinho
+const unsigned long TELEMETRIA_MS = 5000;
+enum Estado { E_VAZIO, E_CHEGANDO, E_PRESENTE, E_SAINDO, E_OBSTACULO, E_FALHA };   // 0–3 = classes do modelo
+
+uint16_t leituras[PRESENCA_N_JANELA];
+uint8_t nLeituras = 0, falhasSeguidas = 0;
+uint8_t estado = E_VAZIO, candidato = E_VAZIO, repeticoes = 0;
+uint16_t distancia = 0, refParado = 0;
+float confianca = 0;
+unsigned long ultimaLeitura = 0, paradoDesde = 0, ultimaTelemetria = 0, ultimoBatimento = 0;
+bool batimentoVisto = false, brutas = false, atendendoLocal = false;
+int8_t reacaoPendente = -1;
+Stream *saida = &Serial;   // eventos vão para onde chegou o último comando (USB ou Bluetooth)
+
+// → distância em cm; SEM_ECO se não há nada até ~4 m; FALHA_SENSOR se o eco não responde.
+uint16_t medirCm() {
+  unsigned long t0 = micros();
+  while (digitalRead(PINO_ECHO))   // eco preso em 1 (com o pull-up, é o fio do Echo solto)
+    if (micros() - t0 > 50000UL) return FALHA_SENSOR;
+  digitalWrite(PINO_TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(PINO_TRIG, LOW);
+  t0 = micros();
+  while (!digitalRead(PINO_ECHO))  // o HC-SR04 sobe o eco ~0,5 ms depois do disparo
+    if (micros() - t0 > 5000UL) return FALHA_SENSOR;
+  t0 = micros();
+  while (digitalRead(PINO_ECHO))
+    if (micros() - t0 > 25000UL) return SEM_ECO;
+  uint16_t cm = (micros() - t0) / 58;
+  return cm > PRESENCA_ALCANCE_CM ? SEM_ECO : cm;
+}
+
+void imprimirEstado(uint8_t e) {
+  switch (e) {
+    case E_VAZIO: saida->print(F("vazio")); break;
+    case E_CHEGANDO: saida->print(F("chegando")); break;
+    case E_PRESENTE: saida->print(F("presente")); break;
+    case E_SAINDO: saida->print(F("saindo")); break;
+    case E_OBSTACULO: saida->print(F("obstaculo")); break;
+    default: saida->print(F("falha"));
+  }
+}
+
+void emitir(const __FlashStringHelper *tipo) {
+  saida->print(F("{\"ev\":\""));
+  saida->print(tipo);
+  saida->print(F("\",\"estado\":\""));
+  imprimirEstado(estado);
+  saida->print(F("\",\"d\":"));
+  saida->print(distancia);
+  saida->print(F(",\"conf\":"));
+  saida->print((int)(confianca * 100));
+  saida->println('}');
+}
+
+// Sem o computador (modo autônomo), o próprio robô reage; com ele, só avisa e o computador decide.
+void aoMudarEstado() {
+  if (!demo) return;
+  if ((estado == E_CHEGANDO || estado == E_PRESENTE) && !atendendoLocal) interromper = true;
+  else if (estado == E_VAZIO && !atendendoLocal) return;
+  reacaoPendente = estado;
+}
+
+void atualizarSensor() {
+  // Sem sensor (ou com o fio solto), cada tentativa espera até 50 ms: tenta de novo só a cada 2 s,
+  // para os braços e a coreografia não ficarem lentos.
+  if (millis() - ultimaLeitura < (estado == E_FALHA ? 2000UL : 100UL)) return;
+  ultimaLeitura = millis();
+  uint16_t d = medirCm();
+  if (brutas) {
+    saida->print(F("{\"ev\":\"bruto\",\"d\":"));
+    saida->print(d == FALHA_SENSOR ? -1 : (int)d);
+    saida->println('}');
+  }
+  uint8_t novo;
+  if (d == FALHA_SENSOR) {
+    if (falhasSeguidas < 255) falhasSeguidas++;
+    if (falhasSeguidas < 10) return;
+    novo = E_FALHA;
+    confianca = 1;
+  } else {
+    falhasSeguidas = 0;
+    distancia = d;
+    memmove(leituras, leituras + 1, sizeof(leituras) - sizeof(leituras[0]));
+    leituras[PRESENCA_N_JANELA - 1] = d;
+    if (nLeituras < PRESENCA_N_JANELA) { nLeituras++; return; }
+    novo = presenca_classificar(leituras, &confianca);
+    if (novo == E_PRESENTE) {
+      float f[PRESENCA_N_CARAC];
+      presenca_caracteristicas(leituras, f);
+      uint16_t cm = f[0] * 100 + 0.5f;
+      if (!paradoDesde || abs((int)cm - (int)refParado) > 2) { paradoDesde = millis(); refParado = cm; }
+      else if (millis() - paradoDesde > OBSTACULO_MS) novo = E_OBSTACULO;
+    } else {
+      paradoDesde = 0;
+    }
+  }
+  if (novo == candidato) { if (repeticoes < 255) repeticoes++; }
+  else { candidato = novo; repeticoes = 1; }
+  if (novo != estado && repeticoes >= (novo >= E_OBSTACULO ? 1 : CONFIRMAR)) {
+    estado = novo;
+    emitir(F("estado"));
+    aoMudarEstado();
+  }
+  if (millis() - ultimaTelemetria >= TELEMETRIA_MS) {
+    ultimaTelemetria = millis();
+    emitir(F("leitura"));
+  }
+}
+
+void reagir(uint8_t e) {
+  interromper = false;
+  switch (e) {
+    case E_CHEGANDO:
+    case E_PRESENTE:
+      if (atendendoLocal) return;
+      atendendoLocal = true;
+      acaoP(PSTR("saudar"));
+      mostrar(F("BAIRROVIVO\nOLA! O ATENDIMENTO\nPOR VOZ ESTA\nSEM CONEXAO AGORA"));
+      break;
+    case E_VAZIO:
+      atendendoLocal = false;
+      mostrar(F("ATE LOGO!"));
+      passo(0, 0, 600);
+      esperarAte = millis() + 3000;
+      break;
+    case E_OBSTACULO:
+      atendendoLocal = true;   // fica parado: a coreografia não roda com algo na frente
+      mostrar(F("PASSAGEM\nOBSTRUIDA?\nAVISE A ZELADORIA"));
+      acaoP(PSTR("duvida"));
+      break;
+    case E_FALHA:
+      atendendoLocal = false;
+      mostrar(F("SENSOR SEM\nRESPOSTA:\nCONFIRA D7/D8"));
+      esperarAte = millis() + 3000;
+      break;
+  }
+}
+
+void verificarBatimento() {
+  if (demo || !batimentoVisto || millis() - ultimoBatimento < BATIMENTO_MS) return;
+  batimentoVisto = false;
+  demo = true;
+  cena = 0;
+  esperarAte = millis();
+  mostrar(F("SEM CONEXAO COM\nO COMPUTADOR:\nMODO AUTONOMO"));
+  saida->println(F("{\"ev\":\"autonomo\"}"));
+  aoMudarEstado();
+}
+
 void processar(char *linha, Stream &resp) {
   char cmd = linha[0];
   char *arg = linha[1] ? linha + 2 : linha + 1;   // o que vem depois de "x "
   char *resto;
+  saida = &resp;
+  ultimoBatimento = millis();
+  if (cmd == 'p') { batimentoVisto = true; return; }   // computador ativo: sem resposta
   esperarAte = millis() + PAUSA_MS;
   if (cmd == 'a') {
     if (acao(arg)) resp.println(F("ok"));
@@ -278,7 +462,13 @@ void processar(char *linha, Stream &resp) {
     demo = cmd == 'm' ? strtol(arg, NULL, 10) != 0 : !demo;
     if (demo && !antes) { cena = 0; esperarAte = millis(); }
     if (!demo && antes) passo(0, 0, 600);   // para com os braços em pé
+    if (demo) batimentoVisto = false;       // o computador saiu de propósito
+    atendendoLocal = false;
     mostrar(demo ? F("DEMONSTRACAO") : F("PRONTO"));
+    resp.println(F("ok"));
+  } else if (cmd == 's') {
+    if (*arg == '1' || *arg == '0') brutas = *arg == '1';
+    else emitir(F("estado"));
     resp.println(F("ok"));
   } else {
     resp.println(F("erro comando"));
@@ -341,11 +531,27 @@ void setup() {
   temTela = Wire.endTransmission() == 0 && tela.begin(SSD1306_SWITCHCAPVCC, 0x3C);   // sem tela, o resto funciona igual
   mostrar(F("HUMOR 75%\nHONESTIDADE 90%"));
   Serial.println(temTela ? F("Tela OK") : F("Tela nao encontrada (0x3C)"));
-  Serial.println(F("Comandos: a <acao> | t <texto> | m <0|1> | u <canal> <us> | j <junta> <graus> | d"));
+  pinMode(PINO_TRIG, OUTPUT);
+  digitalWrite(PINO_TRIG, LOW);
+  pinMode(PINO_ECHO, INPUT_PULLUP);   // fio do Echo solto fica em 1: o robô percebe a falha
+  uint16_t d = medirCm();
+  if (d == FALHA_SENSOR) Serial.println(F("Sensor HC-SR04 sem resposta: confira Trig D7, Echo D8, 5V e GND"));
+  else { Serial.print(F("Sensor HC-SR04 OK: ")); Serial.print(d); Serial.println(F(" cm (0 = nada ate 4 m)")); }
+  Serial.println(F("Comandos: a <acao> | t <texto> | m <0|1> | u <canal> <us> | j <junta> <graus> | d | s"));
   Serial.println(F("Modo autonomo ligado: 'd' desliga"));
 }
 
 void loop() {
   lerComandos();
-  if (demo && (long)(millis() - esperarAte) >= 0) coreografia();
+  atualizarSensor();
+  verificarBatimento();
+  if (reacaoPendente >= 0) {
+    uint8_t e = reacaoPendente;
+    reacaoPendente = -1;
+    reagir(e);
+  } else if (demo && !atendendoLocal && (long)(millis() - esperarAte) >= 0) {
+    coreografia();
+    if (interromper) cena = 0;   // alguém chegou no meio: recomeça do início depois
+  }
+  interromper = false;
 }

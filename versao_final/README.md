@@ -24,6 +24,7 @@ A versão de teste, usada na bancada, continua em `arduino/robo_bracos/` e `ia/`
 | Pilhas **+ / −** | **borne verde V+ / GND** do PCA9685 (se os servos não mexem, inverta) |
 | Borne **V+** (junto com o fio das pilhas) | Uno **Vin** (jumper macho-macho) |
 | Notebook | USB do Uno, pela janela da tampa traseira |
+| Sensor HC-SR04 **VCC / GND / Trig / Echo** (GS) | Uno **5V / GND / D7 / D8** |
 
 ❌ Nunca ligue as pilhas no pino **5V** do Uno. As pilhas movem os servos. O cabo USB pode ficar ligado junto com elas.
 
@@ -55,6 +56,10 @@ A versão de teste, usada na bancada, continua em `arduino/robo_bracos/` e `ia/`
 | `2_testar_digitando.bat` | conversa **digitando**, com o robô no USB |
 | `3_diagnostico.bat` | confere IA, voz, microfone, internet e robô: tudo tem que dar **OK** |
 | `4_conversar_por_voz.bat` | **apresentação**: conversa por voz |
+| `6_totem_bairrovivo.bat` | **GS CitizenTech**: totem do BairroVivo com o sensor ultrassônico ([CITIZENTECH.md](../CITIZENTECH.md)) |
+| `7_totem_digitando.bat` | totem digitando; simule o sensor com `/chegou`, `/saiu`, `/obstaculo`, `/falha` |
+| `8_api_simulada.bat` | API do BairroVivo simulada, com painel em http://localhost:8000 |
+| `9_rodar_testes.bat` | testes automáticos |
 
 Os `.bat` acham sozinhos a porta do Uno (`--porta auto`) e usam a velocidade do cabo (`--baud 115200`).
 
@@ -132,8 +137,10 @@ Pelo Monitor Serial (115200, Nova linha), pelo `tars.py` ou pelo Bluetooth:
 | `d` | liga ou desliga a coreografia (atalho) |
 | `u <canal> <us>` | pulso bruto, para calibrar (ex.: `u 0 1500`); desliga a coreografia |
 | `j <braço> <graus>` | move um braço de −90 a 90 graus (ex.: `j 0 45`) |
+| `s` · `s 1` · `s 0` | estado do sensor agora · liga/desliga as leituras cruas (10 por segundo) |
+| `p` | "estou aqui" do computador (sem resposta); depois do 1º, 10 s sem nenhum comando = modo autônomo |
 
-O robô responde `ok` ao terminar, ou `erro …`. A coreografia autônoma tem 9 cenas, editáveis em `coreografia()`. Depois de qualquer comando, ela espera 30 s antes de voltar.
+O robô responde `ok` ao terminar, ou `erro …`. O sensor manda eventos em JSON, um por linha, como `{"ev":"estado","estado":"presente","d":62,"conf":93}`. A coreografia autônoma tem 9 cenas, editáveis em `coreografia()`. Depois de qualquer comando, ela espera 30 s antes de voltar.
 
 ## Sem os `.bat` (linha de comando, Windows ou Mac)
 

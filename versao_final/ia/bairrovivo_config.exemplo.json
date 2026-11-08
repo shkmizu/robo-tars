@@ -1,0 +1,10 @@
+{
+  "url": "http://localhost:8000",
+  "prefixo": "/api",
+  "dispositivo_id": "tars-totem-01",
+  "local": {
+    "descricao": "Totem BairroVivo (piloto)",
+    "latitude": -23.5505,
+    "longitude": -46.6333
+  }
+}
