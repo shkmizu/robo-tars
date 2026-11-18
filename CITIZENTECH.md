@@ -59,12 +59,12 @@ A parte física do MVP precisa levar essa plataforma para a rua: **um ponto de a
 
 | HC-SR04 | Uno |
 |---|---|
-| VCC | 5V (se o pino 5V estiver ocupado pelo PCA9685: 5V do conector ICSP ou mini protoboard) |
-| GND | GND |
+| VCC | **D6**: o firmware deixa o D6 em 5 V (o sensor gasta ~15 mA, abaixo dos 20 mA por pino) e religa o sensor se ele travar. O pino 5V já está com o PCA9685. Alternativa: 5V do conector ICSP. **Nunca no AREF**, que não é saída de energia |
+| GND | GND ao lado do pino 13 |
 | Trig | **D7** |
 | Echo | **D8** |
 
-Os pinos D7 e D8 estão livres na montagem com o PCA9685. O resto das ligações não muda: veja [versao_final/README.md](versao_final/README.md#ligações).
+Os pinos D6, D7 e D8 estão livres na montagem com o PCA9685: os 4 fios ficam na mesma barra do Uno. O resto das ligações não muda: veja [versao_final/README.md](versao_final/README.md#ligações).
 
 ### Onde o sensor fica
 
@@ -238,7 +238,7 @@ O treino gera um novo `modelo_presenca.h` e atualiza `presenca_metricas.md`. Dep
 | `test_robo.py` | eventos do sensor separados das respostas "ok"; batimento; cabo puxado não derruba o programa |
 | `test_totem.py` | quem passa não é cumprimentado; cumprimento ao chegar; microfone desligado sem ninguém; saída; silêncio; telemetria; registro com confirmação; cancelamento; sem rede; consulta; obstáculo registrado uma vez; sensor com falha; saudação e extração pela IA |
 
-O firmware também foi compilado para o ATmega328P: 30.834 bytes (94% da flash) e 974 bytes de RAM.
+O firmware também foi compilado para o ATmega328P: 31.168 bytes (95% da flash) e 982 bytes de RAM.
 
 **Ainda falta testar com o sensor físico** e anotar aqui os resultados:
 - [ ] Distância real × medida: 30, 60, 100 e 200 cm, com fita métrica.
@@ -272,6 +272,6 @@ O firmware também foi compilado para o ATmega328P: 30.834 bytes (94% da flash) 
 
 - O modelo foi treinado com **dados sintéticos**; os dados reais entram com `presenca.py gravar`. A acurácia real só será conhecida depois da calibração no local.
 - O HC-SR04 tem um cone estreito (~15°): pessoas muito de lado não são vistas, e superfícies macias ou inclinadas refletem mal.
-- O firmware usa 94% da flash do Uno: há pouco espaço para crescer sem otimizar.
+- O firmware usa 95% da flash do Uno: há pouco espaço para crescer sem otimizar.
 - O reconhecimento de voz do Google e as vozes neurais precisam de internet; sem ela, use `--vosk` e `--voz-offline`.
 - A integração foi testada com a API simulada. O backend real do grupo precisa seguir o contrato da seção 6, ou basta ajustar `bairrovivo_config.json`.

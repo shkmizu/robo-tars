@@ -24,7 +24,7 @@ A versão de teste, usada na bancada, continua em `arduino/robo_bracos/` e `ia/`
 | Pilhas **+ / −** | **borne verde V+ / GND** do PCA9685 (se os servos não mexem, inverta) |
 | Borne **V+** (junto com o fio das pilhas) | Uno **Vin** (jumper macho-macho) |
 | Notebook | USB do Uno, pela janela da tampa traseira |
-| Sensor HC-SR04 **VCC / GND / Trig / Echo** (GS) | Uno **5V / GND / D7 / D8** |
+| Sensor HC-SR04 **VCC / GND / Trig / Echo** (GS) | Uno **D6 / GND ao lado do 13 / D7 / D8** (o firmware deixa o D6 em 5 V; nunca no AREF) |
 
 ❌ Nunca ligue as pilhas no pino **5V** do Uno. As pilhas movem os servos. O cabo USB pode ficar ligado junto com elas.
 

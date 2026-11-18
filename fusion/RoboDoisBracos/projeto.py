@@ -541,7 +541,7 @@ def ligacoes():
         ('PCA9685 → OLED SDA/SCL/VCC/GND (jumper fêmea-fêmea 30 cm)', pca_ctrl_cima, oled_pinos, 300.0),
         ('Plugue da fonte → chave (fio 22 AWG 30 cm)', entrada, chave, 300.0),
         ('Chave → borne V+ do PCA9685 (fio 22 AWG 30 cm)', chave, pca_borne, 300.0),
-        ('Sensor HC-SR04 → Uno 5V/GND/D7/D8 (jumper fêmea-macho 30 cm)', us_pinos, uno_d7_d8, 300.0),
+        ('Sensor HC-SR04 → Uno D6/GND/D7/D8 (jumper fêmea-macho 30 cm)', us_pinos, uno_d7_d8, 300.0),
     ]
 
 
@@ -757,7 +757,7 @@ def lista_materiais():
         ('Eletrônica', 'Chave gangorra KCD1 (2 pinos)', 1, f'recorte {CHAVE_RECORTE[0]:g}×{CHAVE_RECORTE[1]:g} mm'),
         ('Eletrônica', 'Módulo Bluetooth HC-05', 1, 'comandos da IA sem fio (D10/D11)'),
         ('Eletrônica', 'Resistores 1 kΩ e 2 kΩ', '1 + 1', 'divisor de tensão no RXD do HC-05'),
-        ('Eletrônica', 'Sensor ultrassônico HC-SR04', 1, f'GS CitizenTech: 2 furos Ø{FURO_ULTRASSOM:g} na frente; D7/D8'),
+        ('Eletrônica', 'Sensor ultrassônico HC-SR04', 1, f'GS CitizenTech: 2 furos Ø{FURO_ULTRASSOM:g} na frente; D6 (VCC), D7, D8'),
         ('Eletrônica', 'Jumper fêmea-macho 30 cm', 4, 'HC-SR04 ↔ Uno (20 cm não alcança)'),
         ('Eletrônica', 'Jumper macho-fêmea 20 cm', 8, 'Uno ↔ PCA9685 e Uno ↔ HC-05'),
         ('Eletrônica', 'Jumper fêmea-fêmea 30 cm', 4, 'PCA9685 ↔ OLED (20 cm não alcança)'),

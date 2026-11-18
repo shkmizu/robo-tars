@@ -15,7 +15,8 @@
 //   HC-05: +5V → 5V (ao lado do RES), GND → GND, TX → D10, RX ← D11 pelo divisor
 //     (D11 →1 kΩ→ RX →2 kΩ→ GND): o RX do HC-05 é de 3,3 V.
 //
-//   Sensor ultrassônico HC-SR04 (GS CitizenTech): VCC → 5V, GND → GND, Trig → D7, Echo → D8.
+//   Sensor ultrassônico HC-SR04 (GS CitizenTech): VCC → D6 (ou 5V do ICSP), GND → GND ao lado do 13,
+//   Trig → D7, Echo → D8. Nunca no AREF: ele não é saída de energia.
 //
 // Comandos (uma linha cada, terminada em Enter), pelo USB (115200) ou pelo Bluetooth (9600):
 //   a <ação>           saudar, dancar, feliz, triste, sim, nao, pensar, repouso,
@@ -279,6 +280,23 @@ void coreografia() {
 // completam o modelo: "presente" sem mexer nem 2 cm por OBSTACULO_MS é um objeto (passagem
 // obstruída), e eco que nunca responde é sensor com falha (fio solto).
 const uint8_t PINO_TRIG = 7, PINO_ECHO = 8;
+// VCC do sensor no D6 (ao lado do D7): o 5V do Uno já alimenta o PCA9685 e alguns clones não têm
+// IOREF. O D6 fica em 5 V; o HC-SR04 gasta ~15 mA, abaixo dos 20 mA recomendados por pino. Bônus:
+// se o sensor travar (o eco de alguns clones fica preso), o robô o desliga e religa sozinho.
+// Sem o PCA9685, o D6 é do servo: aí o VCC vai no 5V do conector ICSP.
+#if USAR_PCA9685
+const int8_t PINO_VCC_SENSOR = 6;
+#else
+const int8_t PINO_VCC_SENSOR = -1;
+#endif
+
+void religarSensor() {
+  if (PINO_VCC_SENSOR < 0) return;
+  digitalWrite(PINO_VCC_SENSOR, LOW);
+  delay(30);
+  digitalWrite(PINO_VCC_SENSOR, HIGH);
+  delay(60);   // o HC-SR04 precisa de um instante para acordar
+}
 const uint16_t SEM_ECO = 0, FALHA_SENSOR = 0xFFFF;
 const uint8_t CONFIRMAR = 3;
 const unsigned long OBSTACULO_MS = 20000;
@@ -350,6 +368,7 @@ void atualizarSensor() {
   // para os braços e a coreografia não ficarem lentos.
   if (millis() - ultimaLeitura < (estado == E_FALHA ? 2000UL : 100UL)) return;
   ultimaLeitura = millis();
+  if (estado == E_FALHA) religarSensor();   // tenta destravar a cada 2 s
   uint16_t d = medirCm();
   if (brutas) {
     saida->print(F("{\"ev\":\"bruto\",\"d\":"));
@@ -531,11 +550,15 @@ void setup() {
   temTela = Wire.endTransmission() == 0 && tela.begin(SSD1306_SWITCHCAPVCC, 0x3C);   // sem tela, o resto funciona igual
   mostrar(F("HUMOR 75%\nHONESTIDADE 90%"));
   Serial.println(temTela ? F("Tela OK") : F("Tela nao encontrada (0x3C)"));
+  if (PINO_VCC_SENSOR >= 0) {
+    pinMode(PINO_VCC_SENSOR, OUTPUT);
+    religarSensor();
+  }
   pinMode(PINO_TRIG, OUTPUT);
   digitalWrite(PINO_TRIG, LOW);
   pinMode(PINO_ECHO, INPUT_PULLUP);   // fio do Echo solto fica em 1: o robô percebe a falha
   uint16_t d = medirCm();
-  if (d == FALHA_SENSOR) Serial.println(F("Sensor HC-SR04 sem resposta: confira Trig D7, Echo D8, 5V e GND"));
+  if (d == FALHA_SENSOR) Serial.println(F("Sensor HC-SR04 sem resposta: confira VCC D6, Trig D7, Echo D8 e GND"));
   else { Serial.print(F("Sensor HC-SR04 OK: ")); Serial.print(d); Serial.println(F(" cm (0 = nada ate 4 m)")); }
   Serial.println(F("Comandos: a <acao> | t <texto> | m <0|1> | u <canal> <us> | j <junta> <graus> | d | s"));
   Serial.println(F("Modo autonomo ligado: 'd' desliga"));

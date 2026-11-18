@@ -90,7 +90,7 @@ A voz é gerada **antes** de o gesto ser enviado, para os braços e a fala come�
 | Servo do braço direito / esquerdo | PCA9685 **canal 0 / 1** (fio marrom na fileira GND) |
 | Pilhas **+ / −** | **borne verde V+ / GND** do PCA9685 (se os servos não mexem, confira a polaridade) |
 | Borne **V+** | Uno **Vin** (jumper) |
-| HC-SR04 **VCC / GND / Trig / Echo** | Uno **5V / GND / D7 / D8** (GS) |
+| HC-SR04 **VCC / GND / Trig / Echo** | Uno **D6 / GND ao lado do 13 / D7 / D8** (GS; o firmware deixa o D6 em 5 V. Nunca no AREF) |
 | Cabo USB do notebook | USB do Uno (janela da tampa traseira) |
 
 ❌ Nunca ligue as pilhas no pino **5V** do Uno. O HC-05 (Bluetooth) é opcional: o projeto usa o cabo USB. As ligações do HC-05 estão em [versao_final/README.md](versao_final/README.md#bluetooth-opcional).
@@ -177,7 +177,7 @@ OK  Cabo Uno A4/A5/5V/GND → PCA9685 (jumper macho-fêmea 20 cm): precisa ~80 m
 OK  Cabo PCA9685 → OLED SDA/SCL/VCC/GND (jumper fêmea-fêmea 30 cm): precisa ~225 mm, tem 300 mm
 OK  Cabo Plugue da fonte → chave (fio 22 AWG 30 cm): precisa ~72 mm, tem 300 mm
 OK  Cabo Chave → borne V+ do PCA9685 (fio 22 AWG 30 cm): precisa ~157 mm, tem 300 mm
-OK  Cabo Sensor HC-SR04 → Uno 5V/GND/D7/D8 (jumper fêmea-macho 30 cm): precisa ~250 mm, tem 300 mm
+OK  Cabo Sensor HC-SR04 → Uno D6/GND/D7/D8 (jumper fêmea-macho 30 cm): precisa ~250 mm, tem 300 mm
 OK  Todas as peças cabem na chapa 900×600
 ```
 
@@ -200,5 +200,5 @@ O guia completo, com checklist, está em [MONTAGEM.md](MONTAGEM.md). O roteiro d
 
 - [ ] **Braço com folga:** prender o horn no eixo com o parafuso pequeno do SG90 e o braço no horn. Se faltarem os discos do mancal, usar um anel de papelão ou EVA entre o braço e o corpo (veja [MONTAGEM.md](MONTAGEM.md#problemas-comuns)).
 - [ ] **Calibração** dos dois servos (`us0` / `us90`).
-- [ ] **GS:** instalar o HC-SR04 (D7/D8), gravar dados reais com `presenca.py gravar`, retreinar e preencher os testes no hardware de [CITIZENTECH.md](CITIZENTECH.md#10-testes).
+- [ ] **GS:** instalar o HC-SR04 (D6/D7/D8), gravar dados reais com `presenca.py gravar`, retreinar e preencher os testes no hardware de [CITIZENTECH.md](CITIZENTECH.md#10-testes).
 - [ ] **Ensaio da apresentação** na sala, com `3_diagnostico.bat` sem nenhuma FALHA.
