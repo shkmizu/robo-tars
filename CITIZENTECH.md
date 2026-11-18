@@ -9,15 +9,12 @@ Evolução do robô TARS, feito antes na disciplina, para o **BairroVivo**, a pl
 
 ## Integrantes
 
-> ⚠️ **Preencher antes da entrega.** Sem o nome de todos, o grupo fica sem nota na GS.
-
 | Nome completo | RM |
 |---|---|
-| _(preencher)_ | _(preencher)_ |
-| _(preencher)_ | _(preencher)_ |
-| _(preencher)_ | _(preencher)_ |
-| _(preencher)_ | _(preencher)_ |
-| _(preencher)_ | _(preencher)_ |
+| Vitor Shimizu Farias de Campos | RM550390 |
+| Victor Asfur | RM551684 |
+| Fabrizio Maia | RM551869 |
+| Rodrigo Paixão | RM96869 |
 
 **Vídeo de demonstração (até 6 min):** _(link do YouTube — preencher)_
 
@@ -204,7 +201,7 @@ Categorias: `Buraco / pavimento`, `Iluminação`, `Descarte irregular`, `Calçad
 | `6_totem_bairrovivo.bat` | **totem completo**: sensor + voz + API |
 | `9_rodar_testes.bat` | os 30 testes automáticos |
 
-Com o backend real do grupo: copie `bairrovivo_config.exemplo.json` para `bairrovivo_config.json`, troque a `url` e coloque a chave do dispositivo em `bairrovivo_chave.txt`. Na API simulada, a chave é `chave-demo`.
+Com o backend real do grupo: copie `bairrovivo_config.exemplo.json` para `bairrovivo_config.json`, troque a `url` e coloque a chave do dispositivo em `bairrovivo_chave.txt`. Na API simulada (`localhost`), a chave `chave-demo` já vale sozinha.
 
 Sem robô e sem microfone, em qualquer sistema:
 ```

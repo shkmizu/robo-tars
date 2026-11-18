@@ -1,5 +1,5 @@
 """Ponte com a API: registro, consulta, fila sem rede, reenvio sem duplicar, chave e validação."""
-import json, os, socket, tempfile, threading, time, unittest
+import json, os, socket, tempfile, threading, time, unittest, unittest.mock
 
 import _base  # noqa: F401
 import api_simulada
@@ -10,6 +10,18 @@ def porta_livre():
     with socket.socket() as s:
         s.bind(('127.0.0.1', 0))
         return s.getsockname()[1]
+
+
+class TestConfig(unittest.TestCase):
+    def test_chave_padrao_so_para_api_na_propria_maquina(self):
+        with tempfile.TemporaryDirectory() as d, unittest.mock.patch.object(bairrovivo, 'ARQ_CHAVE', os.path.join(d, 'x')), \
+                unittest.mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop('BAIRROVIVO_CHAVE', None)
+            os.environ.pop('BAIRROVIVO_URL', None)
+            self.assertEqual(bairrovivo.carregar_config(os.path.join(d, 'nao_existe.json'))['chave'], 'chave-demo')
+            with open(os.path.join(d, 'c.json'), 'w') as f:
+                json.dump({'url': 'https://api.bairrovivo.exemplo'}, f)
+            self.assertIsNone(bairrovivo.carregar_config(os.path.join(d, 'c.json'))['chave'])
 
 
 class TestPonte(unittest.TestCase):

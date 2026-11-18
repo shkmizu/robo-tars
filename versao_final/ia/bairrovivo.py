@@ -12,12 +12,15 @@ para a API do MVP. Ela também registra e consulta as ocorrências que o cidadã
 Contrato da API: CITIZENTECH.md, seção "Contrato da API". Para testar sem o backend do grupo:
   python api_simulada.py
 """
-import json, os, threading, time, urllib.error, urllib.request, uuid
+import json, os, re, threading, time, urllib.error, urllib.request, uuid
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 ARQ_CONFIG = os.path.join(AQUI, 'bairrovivo_config.json')
 ARQ_CHAVE = os.path.join(AQUI, 'bairrovivo_chave.txt')
 ARQ_FILA = os.path.join(AQUI, 'fila_bairrovivo.json')
+
+# Chave da api_simulada.py; só vale como padrão quando a API está em localhost.
+CHAVE_DA_API_SIMULADA = 'chave-demo'
 
 # Mesmas categorias do plano do BairroVivo (seção 3.2)
 CATEGORIAS = ('Buraco / pavimento', 'Iluminação', 'Descarte irregular', 'Calçada / acessibilidade',
@@ -40,6 +43,8 @@ def carregar_config(caminho=ARQ_CONFIG):
             cfg.update(json.load(f))
     cfg['url'] = os.environ.get('BAIRROVIVO_URL', cfg['url']).rstrip('/')
     cfg['chave'] = os.environ.get('BAIRROVIVO_CHAVE') or _ler_chave()
+    if not cfg['chave'] and re.match(r'https?://(localhost|127\.0\.0\.1)([:/]|$)', cfg['url']):
+        cfg['chave'] = CHAVE_DA_API_SIMULADA   # API simulada na própria máquina: não precisa configurar
     return cfg
 
 

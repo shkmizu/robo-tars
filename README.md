@@ -8,7 +8,16 @@
 >
 > **Documentação da GS (instalação, componentes, integração sensor + IA, testes e vídeo): [CITIZENTECH.md](CITIZENTECH.md)**
 >
-> **Integrantes:** _(preencher: nome completo e RM de todos, obrigatório)_ · **Vídeo:** _(link do YouTube)_
+> **Integrantes:**
+>
+> | Nome completo | RM |
+> |---|---|
+> | Vitor Shimizu Farias de Campos | RM550390 |
+> | Victor Asfur | RM551684 |
+> | Fabrizio Maia | RM551869 |
+> | Rodrigo Paixão | RM96869 |
+>
+> **Vídeo de demonstração:** _(link do YouTube: preencher quando publicado)_
 
 
 Robô de mesa inspirado no TARS, de *Interestelar*. São 4 blocos de MDF lado a lado, como no filme: os 2 do meio formam o corpo e os 2 de fora são os braços, cada um movido por um micro servo. Uma tela OLED na frente mostra o que ele está pensando e falando.
