@@ -557,7 +557,12 @@ void setup() {
   pinMode(PINO_TRIG, OUTPUT);
   digitalWrite(PINO_TRIG, LOW);
   pinMode(PINO_ECHO, INPUT_PULLUP);   // fio do Echo solto fica em 1: o robô percebe a falha
-  uint16_t d = medirCm();
+  // O sensor acabou de receber energia pelo D6: a 1ª medição costuma falhar. Tenta até 5 vezes.
+  uint16_t d = FALHA_SENSOR;
+  for (uint8_t i = 0; i < 5 && d == FALHA_SENSOR; i++) {
+    delay(150);
+    d = medirCm();
+  }
   if (d == FALHA_SENSOR) Serial.println(F("Sensor HC-SR04 sem resposta: confira VCC D6, Trig D7, Echo D8 e GND"));
   else { Serial.print(F("Sensor HC-SR04 OK: ")); Serial.print(d); Serial.println(F(" cm (0 = nada ate 4 m)")); }
   Serial.println(F("Comandos: a <acao> | t <texto> | m <0|1> | u <canal> <us> | j <junta> <graus> | d | s"));
