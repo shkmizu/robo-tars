@@ -17,7 +17,7 @@ Evolução do robô TARS, feito antes na disciplina, para o **BairroVivo**, a pl
 | Rodrigo Paixão | RM96869 |
 | André Solér | RM98827 |
 
-**Vídeo de demonstração (até 6 min):** _(link do YouTube — preencher)_
+**Vídeo de demonstração (até 6 min):** https://youtu.be/AXmjkm5v5kA
 
 ---
 

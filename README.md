@@ -18,7 +18,7 @@
 > | Rodrigo Paixão | RM96869 |
 > | André Solér | RM98827 |
 >
-> **Vídeo de demonstração:** _(link do YouTube: preencher quando publicado)_
+> **Vídeo de demonstração (até 6 min):** https://youtu.be/AXmjkm5v5kA
 
 
 Robô de mesa inspirado no TARS, de *Interestelar*. São 4 blocos de MDF lado a lado, como no filme: os 2 do meio formam o corpo e os 2 de fora são os braços, cada um movido por um micro servo. Uma tela OLED na frente mostra o que ele está pensando e falando.
