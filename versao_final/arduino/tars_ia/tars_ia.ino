@@ -326,6 +326,9 @@ const unsigned long TELEMETRIA_MS = 5000;
 enum Estado { E_VAZIO, E_CHEGANDO, E_PRESENTE, E_SAINDO, E_OBSTACULO, E_FALHA };   // 0–3 = classes do modelo
 
 uint16_t leituras[PRESENCA_N_JANELA];
+uint16_t ultimoValido = 0;
+uint8_t ecoPerdido = 0;
+const uint8_t PERDA_MAX = 4;   // até 0,4 s sem eco repete a última distância (roupa e mãos refletem mal)
 uint8_t nLeituras = 0, falhasSeguidas = 0;
 uint8_t estado = E_VAZIO, candidato = E_VAZIO, repeticoes = 0;
 uint16_t distancia = 0, refParado = 0;
@@ -395,6 +398,13 @@ void atualizarSensor() {
     saida->print(F("{\"ev\":\"bruto\",\"d\":"));
     saida->print(d == FALHA_SENSOR ? -1 : (int)d);
     saida->println('}');
+  }
+  if (d == SEM_ECO) {   // alvo que reflete mal: perdas curtas não viram "ninguém na frente"
+    if (ecoPerdido < PERDA_MAX && ultimoValido) { ecoPerdido++; d = ultimoValido; }
+    else ultimoValido = 0;
+  } else if (d != FALHA_SENSOR) {
+    ecoPerdido = 0;
+    ultimoValido = d;
   }
   uint8_t novo;
   if (d == FALHA_SENSOR) {
@@ -543,7 +553,7 @@ void setup() {
   if (PINO_VCC_PCA >= 0) {
     pinMode(PINO_VCC_PCA, OUTPUT);
     digitalWrite(PINO_VCC_PCA, HIGH);
-    delay(60);   // o PCA9685 precisa de um instante depois de receber energia
+    delay(200);   // o PCA9685 precisa de um instante depois de receber energia (na partida a frio, mais)
   }
   Serial.begin(115200);
   Serial.println(F("TARS ligando..."));
@@ -560,9 +570,13 @@ void setup() {
   Wire.begin();
   Wire.setWireTimeout(25000, true);
 #if USAR_PCA9685
-  Wire.beginTransmission(0x40);
-  Serial.println(Wire.endTransmission() == 0 ? F("PCA9685 OK")
-                                             : F("PCA9685 nao encontrado (0x40): confira SDA/SCL/VCC/GND"));
+  bool pcaOk = false;
+  for (uint8_t i = 0; i < 5 && !pcaOk; i++) {   // a 1ª tentativa na partida a frio pode falhar
+    Wire.beginTransmission(0x40);
+    pcaOk = Wire.endTransmission() == 0;
+    if (!pcaOk) delay(100);
+  }
+  Serial.println(pcaOk ? F("PCA9685 OK") : F("PCA9685 nao encontrado (0x40): confira SDA/SCL/VCC/GND"));
   pca.begin();
   pca.setOscillatorFrequency(OSCILADOR_HZ);
   pca.setPWMFreq(50);

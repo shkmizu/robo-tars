@@ -112,7 +112,8 @@ A decisão acontece em **três camadas**, cada uma com uma responsabilidade.
 - **Regras sobre o modelo:**
   - **confirmação:** só muda de estado depois de 3 classificações iguais seguidas;
   - **obstáculo:** "presente" sem variar 2 cm por 20 s é um objeto, porque uma pessoa sempre balança;
-  - **falha:** eco que nunca responde, como um fio solto, gera o estado `falha`.
+  - **falha:** eco que nunca responde, como um fio solto, gera o estado `falha`;
+  - **perda de eco:** roupa, mãos e superfícies inclinadas refletem mal e o sensor devolve "sem eco" (0) de vez em quando. Perdas de até 0,4 s repetem a última distância válida, para não virarem "ninguém na frente".
 
 ### Camada 2: decisões do totem (notebook, `totem.py`)
 
