@@ -208,7 +208,10 @@ O guia completo, com checklist, está em [MONTAGEM.md](MONTAGEM.md). O roteiro d
 
 ## Pendências
 
+Feito: sensor HC-SR04 instalado e lendo, totem funcionando de ponta a ponta com a API (simulada), vídeo de demonstração.
+
+Próximos passos:
 - [ ] **Braço com folga:** prender o horn no eixo com o parafuso pequeno do SG90 e o braço no horn. Se faltarem os discos do mancal, usar um anel de papelão ou EVA entre o braço e o corpo (veja [MONTAGEM.md](MONTAGEM.md#problemas-comuns)).
 - [ ] **Calibração** dos dois servos (`us0` / `us90`).
-- [ ] **GS:** instalar o HC-SR04 (D6/D7/D8), gravar dados reais com `presenca.py gravar`, retreinar e preencher os testes no hardware de [CITIZENTECH.md](CITIZENTECH.md#10-testes).
-- [ ] **Ensaio da apresentação** na sala, com `3_diagnostico.bat` sem nenhuma FALHA.
+- [ ] **Dados reais do sensor:** gravar com `presenca.py gravar`, retreinar e medir a precisão no robô (veja [CITIZENTECH.md](CITIZENTECH.md#9-calibração-e-dados-reais-do-sensor)).
+- [ ] **Backend real do BairroVivo** no lugar da API simulada (o contrato está em [CITIZENTECH.md](CITIZENTECH.md#6-contrato-da-api)).

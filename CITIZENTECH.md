@@ -240,14 +240,18 @@ O treino gera um novo `modelo_presenca.h` e atualiza `presenca_metricas.md`. Dep
 
 O firmware também foi compilado para o ATmega328P: 30.072 bytes (92% da flash) e 867 bytes de RAM (Bluetooth desligado por padrão: a tela precisa de 1024 dos 2048 bytes do Uno).
 
-**Ainda falta testar com o sensor físico** e anotar aqui os resultados:
+**Testado no robô** (sensor instalado, só com o USB como fonte de energia):
+- o sensor lê a distância e o Arduino classifica `vazio`, `chegando`, `presente` e `saindo`;
+- o totem cumprimenta, entende o pedido por voz, pede confirmação e registra na API: a ocorrência aparece no painel;
+- os braços acenam e gesticulam enquanto o TARS fala.
+
+**Ainda sem medições numéricas** (próximos passos, com o sensor físico):
 - [ ] Distância real × medida: 30, 60, 100 e 200 cm, com fita métrica.
 - [ ] 10 aproximações → quantas viraram `chegando`/`presente`.
 - [ ] 10 passagens na frente → quantas foram ignoradas.
-- [ ] Objeto parado → `obstaculo` em ~20 s.
-- [ ] Fio do Echo solto → `falha`.
-- [ ] Totem fechado (Ctrl+C) → modo autônomo em 10 s.
-- [ ] API fechada → fila → reenvio.
+- [ ] Precisão do modelo com dados reais (`presenca.py gravar` e `treinar`).
+
+As situações de falha (API fora do ar, objeto parado, fio do Echo solto e totem fechado) estão cobertas pelos testes automáticos descritos acima.
 
 ## 11. Roteiro do vídeo (até 6 min)
 
