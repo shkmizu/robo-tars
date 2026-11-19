@@ -120,8 +120,8 @@ A decisão acontece em **três camadas**, cada uma com uma responsabilidade.
 | O sensor diz | O totem faz |
 |---|---|
 | `vazio` | espera com o **microfone desligado**; tela "BAIRROVIVO: CHEGUE PERTO" |
-| `chegando` por menos de 1 s e depois `vazio` | nada: a pessoa só passou na calçada |
-| `chegando` por 1 s ou `presente` | cumprimenta (camada 3) e começa o atendimento; liga o microfone |
+| `chegando` ou `presente` **longe** (mais de 1 m) ou por **menos de 1,5 s** | nada: a pessoa só passou pela sala (`ATENDER_ATE_CM`, `SEGURAR_S` em `totem.py`). Falhas do sensor de até 0,8 s não desfazem a presença |
+| alguém **a menos de 1 m** por **1,5 s seguidos** (`chegando`/`presente`) | cumprimenta (camada 3) e começa o atendimento; liga o microfone. Depois de um atendimento, espera 5 s antes de cumprimentar de novo |
 | `presente` + silêncio de 15 s | oferece ajuda |
 | `presente` + silêncio de 40 s | despede-se e não cumprimenta de novo até a pessoa sair |
 | `vazio`/`saindo` por 2,5 s durante o atendimento | "Até logo!" e volta a esperar |

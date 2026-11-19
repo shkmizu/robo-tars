@@ -51,6 +51,7 @@ class Cenario(unittest.TestCase):
         self.t = totem.Totem(self.robo, self.ponte, lambda f: (lambda: self.falas.append(f)), self._ouvir,
                              relogio=self.rel, log=lambda *a: None)
         self.t.esperar_proximo()
+        self.t.fim_atendimento = -1e9        # o 1º atendimento não espera a pausa entre atendimentos
 
     @staticmethod
     def _sem_llm(*a, **k):
@@ -64,6 +65,13 @@ class Cenario(unittest.TestCase):
 
     def sensor(self, estado, d=60):
         self.robo.eventos.put({'ev': 'estado', 'estado': estado, 'd': d, 'conf': 90})
+
+    def aproximar(self, d=60):
+        """Alguém chega e fica perto o tempo que o totem exige antes de cumprimentar."""
+        self.sensor('presente', d)
+        self.t.passo()
+        self.rel.t += totem.SEGURAR_S + 0.1
+        self.t.passo()
 
     def dizer(self, *frases):
         self.roteiro += list(frases)
@@ -84,13 +92,55 @@ class TestPresenca(Cenario):
         self.assertEqual(self.falas, [])
 
     def test_chegou_e_ficou_cumprimenta_conforme_o_periodo(self):
-        self.sensor('chegando', 120)
+        self.sensor('chegando', 90)
         self.t.passo()
-        self.rel.t += 1.2
+        self.rel.t += totem.SEGURAR_S + 0.1
         self.t.passo()
         self.assertEqual(self.t.fase, 'conversa')
         self.assertIn('BairroVivo', self.ultima())
         self.assertIn('a saudar', self.comandos)
+
+    def test_pessoa_longe_nao_e_atendida(self):
+        self.sensor('presente', 160)          # na sala, mas a mais de 1 m
+        self.t.passo()
+        self.rel.t += 5
+        self.t.passo()
+        self.assertEqual(self.falas, [])
+        self.assertEqual(self.t.fase, 'espera')
+
+    def test_presenca_curta_nao_dispara(self):
+        self.sensor('presente', 60)
+        self.t.passo()
+        self.rel.t += 0.5                      # menos que o tempo de segurar
+        self.sensor('saindo', 0)
+        self.t.passo()
+        self.rel.t += 2
+        self.sensor('vazio', 0)
+        self.t.passo()
+        self.assertEqual(self.falas, [])
+
+    def test_falha_curta_do_sensor_nao_desfaz_a_presenca(self):
+        self.sensor('presente', 60)
+        self.t.passo()
+        self.rel.t += 1.0
+        self.sensor('saindo', 0)               # perda de eco por menos de 0,8 s
+        self.t.passo()
+        self.rel.t += 0.5
+        self.sensor('presente', 58)
+        self.t.passo()
+        self.rel.t += 0.7                      # 2,2 s desde o início, com um tropeço no meio
+        self.t.passo()
+        self.assertEqual(self.t.fase, 'conversa')
+
+    def test_pausa_depois_de_um_atendimento(self):
+        self.aproximar()
+        self.t.encerrar(saiu=True)             # volta à espera e marca o fim do atendimento
+        self.falas.clear()
+        self.aproximar()                       # a mesma pessoa balança logo em seguida
+        self.assertEqual(self.t.fase, 'espera')
+        self.rel.t += totem.PAUSA_APOS_ATENDER_S
+        self.t.passo()
+        self.assertEqual(self.t.fase, 'conversa')
 
     def test_microfone_desligado_sem_ninguem(self):
         self.roteiro = ['isto não deveria ser ouvido']
@@ -99,8 +149,7 @@ class TestPresenca(Cenario):
         self.assertEqual(self.roteiro, ['isto não deveria ser ouvido'])
 
     def test_pessoa_foi_embora_encerra(self):
-        self.sensor('presente')
-        self.t.passo()
+        self.aproximar()
         self.sensor('vazio', 0)
         self.rel.t += 3
         self.t.passo()
@@ -109,8 +158,7 @@ class TestPresenca(Cenario):
         self.assertEqual(self.t.fase, 'espera')
 
     def test_silencio_oferece_ajuda_e_depois_se_despede(self):
-        self.sensor('presente')
-        self.t.passo()
+        self.aproximar()
         for _ in range(3):
             self.t.passo()
         self.assertIn('Posso ajudar?', self.ultima())
@@ -171,8 +219,7 @@ class TestGestosAoFalar(Cenario):
 
 class TestOcorrencias(Cenario):
     def chegar(self):
-        self.sensor('presente')
-        self.t.passo()
+        self.aproximar()
 
     def test_registra_poste_apagado_por_voz_com_confirmacao(self):
         self.chegar()
@@ -261,8 +308,7 @@ class TestComIA(Cenario):
         super().setUp(llm)
 
     def test_saudacao_gerada_pela_ia_e_campos_extraidos(self):
-        self.sensor('presente')
-        self.t.passo()
+        self.aproximar()
         self.assertIn('poste', self.ultima())
         self.dizer('a calçada da Rua Augusta 300 está quebrada e sem rampa')
         self.assertEqual(self.t.fase, 'confirmando')          # a IA já trouxe o local

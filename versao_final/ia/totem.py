@@ -29,7 +29,11 @@ SILENCIO_OFERECE_S = 15
 SILENCIO_DESPEDE_S = 40
 SAIU_APOS_S = 2.5            # vazio/saindo por este tempo = a pessoa foi embora
 GESTO_FALA_MIN_CHARS = 40     # falas curtas não gesticulam; as longas ganham gestos enquanto duram
-CHEGANDO_CONFIRMA_S = 1.0    # "chegando" por 1 s (ou "presente") = vem ao totem, não só passando
+# Para o totem não reagir a quem só passa pela sala, a pessoa precisa ficar PERTO e SEGURAR a presença:
+ATENDER_ATE_CM = 100         # só atende quem está a até 1 m (a sala inteira entra no cone do sensor)
+SEGURAR_S = 1.5              # "chegando"/"presente" contínuos por este tempo antes de cumprimentar
+PERDER_INTERESSE_S = 0.8     # a presença só se desfaz depois de tanto tempo sem ninguém perto (histerese)
+PAUSA_APOS_ATENDER_S = 5.0   # depois de um atendimento, espera um pouco antes de cumprimentar de novo
 OBSTACULO_INTERVALO_S = 1800  # no máximo um registro de obstrução a cada 30 min
 OUVIR_S = 6
 
@@ -128,6 +132,9 @@ class Totem:
         self.sensor = 'falha' if sem_sensor else 'vazio'
         self.sensor_desde = relogio()
         self.distancia = 0
+        self.interesse_desde = None       # desde quando há alguém perto, sem interrupção
+        self.sem_interesse_desde = None   # desde quando ninguém está perto (para a histerese)
+        self.fim_atendimento = -1e9
         self.fase = 'espera'      # espera | conversa | pedindo_local | confirmando | pedindo_protocolo | aguardando_saida
         self.rascunho = None
         self.silencio_desde = None
@@ -178,6 +185,8 @@ class Totem:
         tipo = ev.get('ev')
         if tipo in ('estado', 'leitura'):
             self.ponte.enviar_evento_sensor(ev)
+        if tipo == 'leitura':
+            self.distancia = ev.get('d', 0)
         if tipo == 'estado':
             novo = ev.get('estado', 'vazio')
             self.distancia = ev.get('d', 0)
@@ -201,6 +210,25 @@ class Totem:
     def sem_sensor_agora(self):
         return self.sem_sensor or self.sensor == 'falha'
 
+    def atualizar_interesse(self):
+        """Há alguém perto? Segura a presença: pequenas falhas do sensor não a desfazem."""
+        agora = self.relogio()
+        perto = self.sensor in ('chegando', 'presente') and 0 < self.distancia <= ATENDER_ATE_CM
+        if perto:
+            self.sem_interesse_desde = None
+            if self.interesse_desde is None:
+                self.interesse_desde = agora
+        else:
+            if self.sem_interesse_desde is None:
+                self.sem_interesse_desde = agora
+            elif agora - self.sem_interesse_desde > PERDER_INTERESSE_S:
+                self.interesse_desde = None
+
+    def alguem_para_atender(self):
+        self.atualizar_interesse()
+        return (self.interesse_desde is not None and self.relogio() - self.interesse_desde >= SEGURAR_S
+                and self.relogio() - self.fim_atendimento >= PAUSA_APOS_ATENDER_S)
+
     def pessoa_saiu(self):
         if self.sem_sensor_agora():
             return False
@@ -217,9 +245,8 @@ class Totem:
                 if texto:
                     self.iniciar_atendimento(cumprimentar=False)
                     self.responder(texto)
-            elif self.sensor == 'presente' or (self.sensor == 'chegando' and
-                                               self.relogio() - self.sensor_desde >= CHEGANDO_CONFIRMA_S):
-                self.iniciar_atendimento()   # quem só passa na calçada não é cumprimentado
+            elif self.alguem_para_atender():
+                self.iniciar_atendimento()   # quem só passa pela sala, longe ou rápido, não é cumprimentado
             else:
                 time.sleep(0.1)
             return
@@ -259,11 +286,14 @@ class Totem:
     def rodar(self):
         self.robo.modo_autonomo(False)
         self.esperar_proximo()
+        self.fim_atendimento = -1e9   # ainda não houve atendimento: o primeiro cumprimento não espera
         while True:
             self.passo()
 
     # ── atendimento ──────────────────────────────────────────────────────────────
     def esperar_proximo(self):
+        self.fim_atendimento = self.relogio()
+        self.interesse_desde = None
         self.fase, self.rascunho = 'espera', None
         self.robo.texto('BAIRROVIVO: CHEGUE PERTO' if not self.sem_sensor_agora() else 'BAIRROVIVO: FALE COMIGO')
 
