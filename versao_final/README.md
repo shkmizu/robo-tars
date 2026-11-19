@@ -131,7 +131,7 @@ Pelo Monitor Serial (115200, Nova linha), pelo `tars.py` ou pelo Bluetooth:
 
 | Comando | O que faz |
 |---|---|
-| `a <gesto>` | `saudar`, `dancar`, `feliz`, `triste`, `sim`, `nao`, `pensar`, `repouso`, `andar`, `roda`, `piada`, `duvida`, `susto` |
+| `a <gesto>` | `saudar`, `dancar`, `feliz`, `triste`, `sim`, `nao`, `pensar`, `repouso`, `andar`, `roda`, `piada`, `duvida`, `susto`, `falar` (gesticula de leve; o totem a repete enquanto fala) |
 | `t <texto>` | escreve na tela (sem acentos) |
 | `m 0` / `m 1` | coreografia desligada / ligada |
 | `d` | liga ou desliga a coreografia (atalho) |

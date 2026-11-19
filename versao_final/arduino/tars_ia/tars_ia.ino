@@ -20,7 +20,7 @@
 //
 // Comandos (uma linha cada, terminada em Enter), pelo USB (115200) ou pelo Bluetooth (9600):
 //   a <ação>           saudar, dancar, feliz, triste, sim, nao, pensar, repouso,
-//                      andar, roda, piada (a tela pisca), duvida, susto
+//                      andar, roda, piada (a tela pisca), duvida, susto, falar (gesticula de leve)
 //   t <texto>          escreve na tela (sem acentos)
 //   m <0|1>            modo autônomo: 0 = parado (conversa com a IA), 1 = coreografia
 //   u <canal> <us>     pulso bruto, para calibrar   (ex.: "u 0 1500")
@@ -197,6 +197,8 @@ bool acao(const char *nome) {
       passo(-15, 15, 200);
     }
     passo(0, 0, 300);
+  } else if (!strcmp_P(nome, PSTR("falar"))) {    // gesticula de leve enquanto o TARS fala (~1 s)
+    passo(30, 5, 400); passo(5, 30, 400); passo(0, 0, 300);
   } else if (!strcmp_P(nome, PSTR("duvida"))) {   // "encolhe os ombros"
     passo(-20, -20, 300); esperar(700); passo(0, 0, 400);
   } else if (!strcmp_P(nome, PSTR("susto"))) {

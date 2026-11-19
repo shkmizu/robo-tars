@@ -1,6 +1,6 @@
 """Totem do BairroVivo: o que o TARS faz em cada situação do sensor e da conversa.
 Sem Ollama, sem microfone e sem robô: a IA, a voz e a API são trocadas por versões de teste."""
-import json, unittest
+import json, time, unittest
 from unittest import mock
 
 import _base  # noqa: F401
@@ -126,6 +126,48 @@ class TestPresenca(Cenario):
         self.robo.eventos.put({'ev': 'leitura', 'estado': 'presente', 'd': 61, 'conf': 88})
         self.t.passo()
         self.assertEqual([e['ev'] for e in self.ponte.leituras], ['estado', 'leitura'])
+
+
+class TestGestosAoFalar(Cenario):
+    def setUp(self):
+        super().setUp()
+        self.robo.serial = True              # "conectado": o envio é interceptado por self.comandos
+
+    def _tocar_ate(self, n):
+        import threading
+        pronto = threading.Event()
+
+        def preparar(fala):
+            def tocar():
+                pronto.wait(timeout=5)       # a fala dura até o robô receber n gestos
+            return tocar
+        self.t.preparar = preparar
+        orig = self.robo._enviar
+
+        def enviar(linha, esperar):
+            orig(linha, esperar)
+            time.sleep(0.02)                  # cada gesto leva um tempo, como no robô de verdade
+            if self.comandos.count('a falar') >= n:
+                pronto.set()
+        self.robo._enviar = enviar
+
+    def test_fala_longa_gesticula_ate_acabar(self):
+        self._tocar_ate(3)
+        self.t.falar('Registrado! Um operador vai revisar o seu relato. Quer registrar mais alguma coisa?', 'feliz')
+        self.assertGreaterEqual(self.comandos.count('a falar'), 3)
+        self.assertLess(self.comandos.count('a falar'), 10)       # para quando a fala acaba
+        self.assertEqual(self.comandos.count('a feliz'), 1)     # o gesto principal continua
+
+    def test_fala_curta_nao_gesticula(self):
+        self._tocar_ate(1)
+        self.t.falar('Até logo!', 'saudar')
+        self.assertNotIn('a falar', self.comandos)
+
+    def test_sem_robo_conectado_so_fala(self):
+        self.robo.serial = None
+        self._tocar_ate(1)
+        self.t.falar('Uma fala bem comprida para passar do limite de caracteres do gesto.', 'sim')
+        self.assertNotIn('a falar', self.comandos)
 
 
 class TestOcorrencias(Cenario):

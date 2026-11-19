@@ -28,6 +28,7 @@ from tars import (ACOES, MODELO, decidir, interpretar, microfone, microfone_offl
 SILENCIO_OFERECE_S = 15
 SILENCIO_DESPEDE_S = 40
 SAIU_APOS_S = 2.5            # vazio/saindo por este tempo = a pessoa foi embora
+GESTO_FALA_MIN_CHARS = 40     # falas curtas não gesticulam; as longas ganham gestos enquanto duram
 CHEGANDO_CONFIRMA_S = 1.0    # "chegando" por 1 s (ou "presente") = vem ao totem, não só passando
 OBSTACULO_INTERVALO_S = 1800  # no máximo um registro de obstrução a cada 30 min
 OUVIR_S = 6
@@ -141,7 +142,28 @@ class Totem:
         tocar = self.preparar(fala)
         self.robo.texto(tela or fala)
         self.robo.acao(acao if acao in ACOES else 'repouso')
-        tocar()
+        self.gesticular_falando(tocar, fala)
+
+    def gesticular_falando(self, tocar, fala):
+        """Toca a fala e, se ela for longa, gesticula de leve enquanto durar (comando "a falar").
+        Cada gesto espera o anterior terminar (o Robo só envia depois do "ok"), então o ritmo
+        é o do próprio robô. Sem robô conectado, só fala."""
+        if len(fala) < GESTO_FALA_MIN_CHARS or not getattr(self.robo, 'serial', None):
+            return tocar()
+        erro = []
+
+        def falar_alto():
+            try:
+                tocar()
+            except Exception as e:   # falha de áudio não pode travar os gestos
+                erro.append(e)
+        fio = threading.Thread(target=falar_alto, daemon=True)
+        fio.start()
+        while fio.is_alive():
+            self.robo.acao('falar')
+        fio.join()
+        if erro:
+            raise erro[0]
 
     # ── eventos do sensor ────────────────────────────────────────────────────────
     def processar_eventos(self):

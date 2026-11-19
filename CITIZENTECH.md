@@ -126,6 +126,7 @@ A decisão acontece em **três camadas**, cada uma com uma responsabilidade.
 | `vazio`/`saindo` por 2,5 s durante o atendimento | "Até logo!" e volta a esperar |
 | `obstaculo` | registra **uma** ocorrência "Calçada / acessibilidade: possível obstrução", origem `sensor_fisico`, para revisão (no máximo uma a cada 30 min) |
 | `falha` | avisa na tela e passa a atender **quando alguém fala**, sem o sensor |
+| qualquer fala com mais de 40 caracteres | **gesticula de leve enquanto fala** (`a falar`, repetido até a voz acabar); acena ao cumprimentar e de novo ao se despedir. Os braços precisam de energia nos servos |
 | todo evento | vira telemetria na API (`/dispositivos/{id}/leituras`) |
 
 ### Camada 3: IA generativa local (Ollama, llama3.2:3b)
