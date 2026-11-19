@@ -288,6 +288,22 @@ class TestOcorrencias(Cenario):
         oc = self.ponte.ocorrencias[0]
         self.assertEqual((oc['categoria'], oc['origem']), ('Calçada / acessibilidade', 'sensor_fisico'))
 
+    def test_objeto_parado_cumprimentado_antes_ainda_vira_obstrucao(self):
+        self.aproximar(45)                     # o objeto parece uma pessoa e é cumprimentado
+        self.assertEqual(self.t.fase, 'conversa')
+        self.sensor('obstaculo', 45)           # 20 s depois, sem se mexer
+        self.t.passo()
+        self.assertEqual(len(self.ponte.ocorrencias), 1)
+        self.assertEqual(self.ponte.ocorrencias[0]['origem'], 'sensor_fisico')
+
+    def test_obstrucao_nao_interrompe_um_registro_em_andamento(self):
+        self.chegar()
+        self.dizer('tem um poste apagado na Rua das Flores 120')
+        self.assertEqual(self.t.fase, 'confirmando')
+        self.sensor('obstaculo', 45)
+        self.t.passo()
+        self.assertEqual(self.ponte.ocorrencias, [])
+
     def test_sensor_com_falha_atende_quando_alguem_fala(self):
         self.sensor('falha', 0)
         self.roteiro = ['tem uma placa caída na praça da matriz']

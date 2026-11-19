@@ -451,7 +451,10 @@ class Totem:
 
     def registrar_obstaculo(self):
         agora = self.relogio()
-        if self.fase != 'espera' or agora - self.ultimo_obstaculo < OBSTACULO_INTERVALO_S:
+        # Um objeto parado primeiro parece uma pessoa (o totem cumprimenta); depois de 20 s sem se mexer,
+        # vira obstrução em qualquer fase, menos no meio de um pedido (não interrompe um registro).
+        if self.fase in ('confirmando', 'pedindo_local', 'pedindo_protocolo') or \
+                agora - self.ultimo_obstaculo < OBSTACULO_INTERVALO_S:
             return
         self.ultimo_obstaculo = agora
         rascunho = {'titulo': 'Possível obstrução em frente ao totem', 'categoria': 'Calçada / acessibilidade',

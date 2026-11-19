@@ -175,7 +175,7 @@ Categorias: `Buraco / pavimento`, `Iluminação`, `Descarte irregular`, `Calçad
 
 | Situação | O que acontece | Como mostrar no vídeo |
 |---|---|---|
-| Notebook desligado ou cabo USB puxado | em 10 s, o Arduino volta a decidir sozinho: coreografia, e quando alguém chega ele acena e mostra "BAIRROVIVO… SEM CONEXAO" | tirar o USB com o robô nas pilhas |
+| Programa do notebook fechado (Ctrl+C) ou sem resposta do computador | em 10 s, o Arduino volta a decidir sozinho: coreografia, e quando alguém chega ele acena e mostra "BAIRROVIVO… SEM CONEXAO". Sem pilhas, tirar o cabo USB também desliga o robô, então a demonstração é fechar o totem | fechar a janela do `6_totem_bairrovivo.bat` com Ctrl+C e chegar perto do robô |
 | Internet ou API fora do ar | o relato vai para a fila em disco; o TARS avisa "guardei e envio quando voltar"; o reenvio é automático, sem duplicar | fechar o `8_api_simulada.bat`, registrar, abrir de novo e ver no painel |
 | Ollama fora | saudação pronta + palavras-chave: o registro continua funcionando | fechar o Ollama |
 | Sensor desconectado | estado `falha`, aviso na tela; o totem passa a atender por voz | soltar o fio do Echo |
@@ -245,7 +245,7 @@ O firmware também foi compilado para o ATmega328P: 30.072 bytes (92% da flash) 
 - [ ] 10 passagens na frente → quantas foram ignoradas.
 - [ ] Objeto parado → `obstaculo` em ~20 s.
 - [ ] Fio do Echo solto → `falha`.
-- [ ] USB puxado → modo autônomo em 10 s.
+- [ ] Totem fechado (Ctrl+C) → modo autônomo em 10 s.
 - [ ] API fechada → fila → reenvio.
 
 ## 11. Roteiro do vídeo (até 6 min)
@@ -256,7 +256,7 @@ O firmware também foi compilado para o ATmega328P: 30.072 bytes (92% da flash) 
 | 0:40–1:30 | O robô: o sensor na frente, as ligações, o modelo 3D com o cone de alcance |
 | 1:30–2:15 | Como a IA decide: as 3 camadas e o modelo treinado (mostrar a matriz de confusão) |
 | 2:15–4:00 | **Demonstração:** alguém passa (não é chamado) → alguém chega (saudação) → "tem um poste apagado na Rua…" → confirmação → protocolo → aparece no painel → "qual o status do protocolo 1?" |
-| 4:00–5:15 | **Falhas:** API fechada (fila e reenvio) · mochila na frente (obstrução registrada) · USB puxado (modo autônomo) |
+| 4:00–5:15 | **Falhas:** API fechada (fila e reenvio) · objeto na frente (obstrução registrada) · totem fechado (modo autônomo) |
 | 5:15–6:00 | Resultados, limitações e próximos passos |
 
 ## 12. Segurança, privacidade e ética
