@@ -16,6 +16,7 @@
 > | Victor Asfur | RM551684 |
 > | Fabrizio Maia | RM551869 |
 > | Rodrigo Paixão | RM96869 |
+> | André Solér | RM98827 |
 >
 > **Vídeo de demonstração:** _(link do YouTube: preencher quando publicado)_
 

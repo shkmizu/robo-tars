@@ -15,6 +15,7 @@ Evolução do robô TARS, feito antes na disciplina, para o **BairroVivo**, a pl
 | Victor Asfur | RM551684 |
 | Fabrizio Maia | RM551869 |
 | Rodrigo Paixão | RM96869 |
+| André Solér | RM98827 |
 
 **Vídeo de demonstração (até 6 min):** _(link do YouTube — preencher)_
 
