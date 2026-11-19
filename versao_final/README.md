@@ -171,6 +171,8 @@ No **Mac**:
 
 ## Bluetooth (opcional)
 
+O firmware vem com o Bluetooth **desligado** (`#define USAR_BLUETOOTH 0` no topo do `tars_ia.ino`) para sobrar memória à tela e ao sensor. Para usar o HC-05, troque para `1` e carregue de novo.
+
 O HC-05 substitui o cabo USB. O Arduino já escuta os dois.
 
 | HC-05 | Uno |

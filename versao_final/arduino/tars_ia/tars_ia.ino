@@ -38,8 +38,15 @@
 //   (D10/D11 ficam livres para o HC-05.) A bateria entra só no Vin/GND do Uno.
 #define USAR_PCA9685 1
 
+// 0 = só USB (padrão). 1 = também Bluetooth HC-05 em D10/D11. Cuidado: o Bluetooth gasta ~150 bytes de
+// RAM, e a tela precisa reservar 1024 dos 2048 do Uno ao ligar; com o Bluetooth + o sensor,
+// a conta fica sem folga e a tela "não é encontrada". Ligue só se for usar o HC-05.
+#define USAR_BLUETOOTH 0
+
 #include <Wire.h>
+#if USAR_BLUETOOTH
 #include <SoftwareSerial.h>
+#endif
 #if USAR_PCA9685
 #include <Adafruit_PWMServoDriver.h>
 #else
@@ -56,7 +63,9 @@ Servo servos[2];
 const uint8_t PINOS_SERVO[2] = {9, 6};   // canal 0 = braço D, canal 1 = braço E
 #endif
 Adafruit_SSD1306 tela(128, 64, &Wire, -1);
+#if USAR_BLUETOOTH
 SoftwareSerial bt(10, 11);   // RX ← TXD do HC-05, TX → RXD do HC-05 (pelo divisor)
+#endif
 bool temTela = false;
 
 // O oscilador interno do PCA9685 varia entre placas (~23–27 MHz). Se "u 0 1500" não deixar
@@ -496,7 +505,11 @@ void processar(char *linha, Stream &resp) {
 
 // Junta os caracteres de cada porta até o Enter e executa a linha.
 struct Entrada { Stream *porta; char buf[64]; uint8_t n; };   // RAM do Uno é curta (2 KB); o tars.py manda até 63
+#if USAR_BLUETOOTH
 Entrada entradas[] = {{&Serial, {}, 0}, {&bt, {}, 0}};
+#else
+Entrada entradas[] = {{&Serial, {}, 0}};
+#endif
 
 void lerComandos() {
   for (Entrada &e : entradas) {
@@ -517,7 +530,9 @@ void lerComandos() {
 void setup() {
   Serial.begin(115200);
   Serial.println(F("TARS ligando..."));
+#if USAR_BLUETOOTH
   bt.begin(9600);             // velocidade de fábrica do HC-05
+#endif
   // SDA e SCL ficam em 1 quando livres; em 0, o fio está encostado no GND (ou o módulo está com defeito).
   pinMode(SDA, INPUT_PULLUP);
   pinMode(SCL, INPUT_PULLUP);
@@ -547,9 +562,12 @@ void setup() {
 #endif
   // tela.begin() diz que deu certo mesmo sem tela, então primeiro vê se algo responde no 0x3C.
   Wire.beginTransmission(0x3C);
-  temTela = Wire.endTransmission() == 0 && tela.begin(SSD1306_SWITCHCAPVCC, 0x3C);   // sem tela, o resto funciona igual
+  bool telaResponde = Wire.endTransmission() == 0;
+  temTela = telaResponde && tela.begin(SSD1306_SWITCHCAPVCC, 0x3C);   // sem tela, o resto funciona igual
   mostrar(F("HUMOR 75%\nHONESTIDADE 90%"));
-  Serial.println(temTela ? F("Tela OK") : F("Tela nao encontrada (0x3C)"));
+  Serial.println(temTela ? F("Tela OK")
+                 : telaResponde ? F("Tela respondeu, mas faltou memoria (desligue o Bluetooth)")
+                                : F("Tela nao encontrada (0x3C): confira VCC 3.3V, GND, SDA e SCL"));
   if (PINO_VCC_SENSOR >= 0) {
     pinMode(PINO_VCC_SENSOR, OUTPUT);
     religarSensor();

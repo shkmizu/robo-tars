@@ -235,7 +235,7 @@ O treino gera um novo `modelo_presenca.h` e atualiza `presenca_metricas.md`. Dep
 | `test_robo.py` | eventos do sensor separados das respostas "ok"; batimento; cabo puxado não derruba o programa |
 | `test_totem.py` | quem passa não é cumprimentado; cumprimento ao chegar; microfone desligado sem ninguém; saída; silêncio; telemetria; registro com confirmação; cancelamento; sem rede; consulta; obstáculo registrado uma vez; sensor com falha; saudação e extração pela IA |
 
-O firmware também foi compilado para o ATmega328P: 31.168 bytes (95% da flash) e 982 bytes de RAM.
+O firmware também foi compilado para o ATmega328P: 30.072 bytes (92% da flash) e 867 bytes de RAM (Bluetooth desligado por padrão: a tela precisa de 1024 dos 2048 bytes do Uno).
 
 **Ainda falta testar com o sensor físico** e anotar aqui os resultados:
 - [ ] Distância real × medida: 30, 60, 100 e 200 cm, com fita métrica.
@@ -269,6 +269,6 @@ O firmware também foi compilado para o ATmega328P: 31.168 bytes (95% da flash) 
 
 - O modelo foi treinado com **dados sintéticos**; os dados reais entram com `presenca.py gravar`. A acurácia real só será conhecida depois da calibração no local.
 - O HC-SR04 tem um cone estreito (~15°): pessoas muito de lado não são vistas, e superfícies macias ou inclinadas refletem mal.
-- O firmware usa 95% da flash do Uno: há pouco espaço para crescer sem otimizar.
+- A RAM do Uno é o limite: a tela reserva 1024 dos 2048 bytes, e o firmware usa 867. Por isso o Bluetooth vem desligado (`USAR_BLUETOOTH 0`); ligue só se for usar o HC-05.
 - O reconhecimento de voz do Google e as vozes neurais precisam de internet; sem ela, use `--vosk` e `--voz-offline`.
 - A integração foi testada com a API simulada. O backend real do grupo precisa seguir o contrato da seção 6, ou basta ajustar `bairrovivo_config.json`.
