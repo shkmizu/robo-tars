@@ -1,0 +1,14 @@
+﻿GLOBAL SOLUTION 2026.2 - CitizenTech
+Project-Based Maker Lab - Evolução de um robô inteligente para CitizenTech
+Projeto: TARS Totem BairroVivo
+
+INTEGRANTES (nome completo seguido do RM)
+Vitor Shimizu Farias de Campos RM550390
+Victor Asfur RM551684
+Fabrizio Maia RM551869
+Rodrigo Paixão RM96869
+André Solér RM98827
+
+LINKS
+Repositório GitHub: https://github.com/shkmizu/robo-tars
+Vídeo de demonstração (YouTube): https://youtu.be/AXmjkm5v5kA
