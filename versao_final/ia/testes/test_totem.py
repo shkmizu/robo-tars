@@ -152,6 +152,18 @@ class TestOcorrencias(Cenario):
         self.assertEqual(self.t.fase, 'confirmando')
         self.assertEqual(self.t.rascunho['local_texto'], 'Rua das Flores 120')
 
+    def test_silencio_na_confirmacao_repete_a_pergunta_e_nao_envia(self):
+        self.chegar()
+        self.dizer('tem um poste apagado na Rua das Flores 120')
+        for _ in range(3):
+            self.t.passo()                      # silêncio de 15 s
+        self.assertIn('Posso enviar o registro?', self.ultima())
+        for _ in range(5):
+            self.t.passo()                      # silêncio de 40 s
+        self.assertIn('não enviei o relato', self.ultima())
+        self.assertEqual(self.ponte.ocorrencias, [])
+        self.assertIsNone(self.t.rascunho)
+
     def test_nao_cancela_o_registro(self):
         self.chegar()
         self.dizer('tem lixo jogado na esquina da rua 3', 'esquina da rua 3', 'não, está errado')

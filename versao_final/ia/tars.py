@@ -600,8 +600,13 @@ def voz(offline=False):
             except Exception as erro:
                 if not motores:
                     raise
-                print(f'(voz falhou: {erro}; usando a próxima voz daqui em diante)')
-                atual.clear()
+                print(f'(voz falhou: {erro}; tentando de novo)')
+                time.sleep(0.7)
+                try:
+                    return atual[0](texto)   # um tropeço da rede não derruba a voz boa
+                except Exception as erro2:
+                    print(f'(voz falhou de novo: {erro2}; usando a próxima voz daqui em diante)')
+                    atual.clear()
 
     def preparar_risada():
         """tocar() da risada, ou uma função que não faz nada se esta voz não sabe rir."""

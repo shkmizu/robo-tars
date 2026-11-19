@@ -225,8 +225,14 @@ class Totem:
             self.encerrar(saiu=False)
         elif calado >= SILENCIO_OFERECE_S and not self.ofereceu:
             self.ofereceu = True
-            self.falar('Posso ajudar? Você pode registrar um problema do bairro, como poste apagado ou '
-                       'buraco, ou consultar um protocolo.', 'pensar', 'POSSO AJUDAR?')
+            pendente = {'confirmando': ('Posso enviar o registro? Responda sim ou não.', 'POSSO ENVIAR? SIM/NAO'),
+                        'pedindo_local': ('Onde fica? Diga a rua, o número ou um ponto de referência.', 'ONDE FICA?'),
+                        'pedindo_protocolo': ('Qual é o número do protocolo?', 'NUMERO DO PROTOCOLO?')}.get(self.fase)
+            if pendente:   # no meio de um pedido: repete a pergunta, em vez da oferta genérica
+                self.falar(pendente[0], 'duvida', pendente[1])
+            else:
+                self.falar('Posso ajudar? Você pode registrar um problema do bairro, como poste apagado ou '
+                           'buraco, ou consultar um protocolo.', 'pensar', 'POSSO AJUDAR?')
 
     def rodar(self):
         self.robo.modo_autonomo(False)
@@ -379,10 +385,16 @@ class Totem:
     def encerrar(self, saiu):
         if saiu:
             self.log('[sensor] a pessoa foi embora')
-            self.falar('Até logo!', 'saudar', 'ATE LOGO!')
+            self.falar('Até logo!' if not self.rascunho else 'Até logo! Não enviei o relato, porque faltou confirmar.',
+                       'saudar', 'ATE LOGO!')
             self.esperar_proximo()
         else:
-            self.falar('Obrigado! Se precisar, é só chegar perto de novo.', 'saudar', 'ATE LOGO!')
+            if self.rascunho:   # o cidadão não confirmou: nada foi enviado
+                self.falar('Como você não confirmou, não enviei o relato. Se precisar, é só chegar perto de novo.',
+                           'sim', 'NAO ENVIEI O RELATO')
+            else:
+                self.falar('Obrigado! Se precisar, é só chegar perto de novo.', 'saudar', 'ATE LOGO!')
+            self.rascunho = None
             self.fase = 'aguardando_saida'
 
     def registrar_obstaculo(self):
