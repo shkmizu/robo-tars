@@ -1,6 +1,6 @@
 """Totem do BairroVivo: o que o TARS faz em cada situação do sensor e da conversa.
 Sem Ollama, sem microfone e sem robô: a IA, a voz e a API são trocadas por versões de teste."""
-import json, time, unittest
+import json, threading, time, unittest
 from unittest import mock
 
 import _base  # noqa: F401
@@ -134,7 +134,6 @@ class TestGestosAoFalar(Cenario):
         self.robo.serial = True              # "conectado": o envio é interceptado por self.comandos
 
     def _tocar_ate(self, n):
-        import threading
         pronto = threading.Event()
 
         def preparar(fala):
@@ -146,7 +145,7 @@ class TestGestosAoFalar(Cenario):
 
         def enviar(linha, esperar):
             orig(linha, esperar)
-            time.sleep(0.02)                  # cada gesto leva um tempo, como no robô de verdade
+            threading.Event().wait(0.02)      # cada gesto leva um tempo, como no robô de verdade
             if self.comandos.count('a falar') >= n:
                 pronto.set()
         self.robo._enviar = enviar
