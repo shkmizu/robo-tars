@@ -234,16 +234,36 @@ def carregar_header(caminho=HEADER):
 
 # ─── Gravação de dados reais pelo robô ───────────────────────────────────────────────
 
+class RetemPerdas:
+    """Mesma regra do firmware (tars_ia.ino): até PERDA_MAX leituras seguidas sem eco (0) repetem a
+    última distância válida. Quem grava e treina vê as mesmas leituras que o classificador do Arduino."""
+    PERDA_MAX = 4
+
+    def __init__(self):
+        self.ultimo, self.perdidas = 0, 0
+
+    def __call__(self, d):
+        if d == 0:
+            if self.perdidas < self.PERDA_MAX and self.ultimo:
+                self.perdidas += 1
+                return self.ultimo
+            self.ultimo = 0
+            return 0
+        self.perdidas, self.ultimo = 0, d
+        return d
+
+
 def _leituras_do_robo(a):
     from tars import Robo
     robo = Robo(a.porta, a.baud)
     robo.modo_autonomo(False)
     robo.leituras_brutas(True)
+    reter = RetemPerdas()
     try:
         while True:
             ev = robo.eventos.get()
-            if ev.get('ev') == 'bruto':
-                yield int(ev.get('d', 0))
+            if ev.get('ev') == 'bruto' and ev.get('d', -1) >= 0:   # -1 = sensor sem resposta: ignora
+                yield reter(int(ev['d']))
     finally:
         robo.leituras_brutas(False)
         robo.modo_autonomo(True)

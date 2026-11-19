@@ -23,6 +23,17 @@ class TestCaracteristicas(unittest.TestCase):
         self.assertAlmostEqual(P.caracteristicas([50] * 4 + [300] + [50] * 5)[0], 0.5)   # mediana de 3
 
 
+class TestRetemPerdas(unittest.TestCase):
+    def test_mesma_regra_do_firmware(self):
+        r = P.RetemPerdas()
+        self.assertEqual([r(x) for x in [55, 0, 55, 0, 0, 55, 57, 0, 0, 0, 0, 0, 0]],
+                         [55, 55, 55, 55, 55, 55, 57, 57, 57, 57, 57, 0, 0])
+
+    def test_sem_nada_antes_continua_zero(self):
+        r = P.RetemPerdas()
+        self.assertEqual([r(0), r(0)], [0, 0])
+
+
 class TestModelo(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
