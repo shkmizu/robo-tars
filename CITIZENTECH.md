@@ -44,7 +44,7 @@ A parte física do MVP precisa levar essa plataforma para a rua: **um ponto de a
 |---|---|---|
 | Arduino Uno (clone CH340) | lê o sensor, roda o modelo de presença, controla braços e tela | |
 | **Sensor ultrassônico HC-SR04** | distância de 2 a 400 cm, 10 leituras por segundo | **sim** |
-| PCA9685 (I²C 0x40) | sinal e energia dos servos | |
+| PCA9685 (I²C 0x40) | sinal dos servos. Sem pilhas: Uno **5V → V+** (energia dos servos pelo USB) e Uno **D5 → VCC** (só o chip) | |
 | 2 × micro servo SG90 | braços: 13 gestos | |
 | OLED 0,96" SSD1306 (I²C 0x3C) | estado do atendimento, protocolo, avisos | |
 | 4 pilhas AA (6 V) | energia dos servos e do Uno (Vin) | |

@@ -21,6 +21,7 @@ A versão de teste, usada na bancada, continua em `arduino/robo_bracos/` e `ia/`
 | Uno **A4 / A5 / 5V / GND** | PCA9685 **SDA / SCL / VCC / GND** |
 | Uno **SDA / SCL** (os 2 pinos ao lado do AREF), **3.3V**, **GND** | OLED **SDA / SCK / VDD / GND** |
 | Servo do braço direito / esquerdo | PCA9685 **canal 0 / 1** (marrom na fileira preta, GND) |
+| **Sem pilhas (só USB):** Uno **5V** → pino **V+** do PCA9685, e Uno **D5** → pino **VCC** do PCA9685 | energia dos servos pelo USB. **Nunca junto com as pilhas** |
 | Pilhas **+ / −** | **borne verde V+ / GND** do PCA9685 (se os servos não mexem, inverta) |
 | Borne **V+** (junto com o fio das pilhas) | Uno **Vin** (jumper macho-macho) |
 | Notebook | USB do Uno, pela janela da tampa traseira |

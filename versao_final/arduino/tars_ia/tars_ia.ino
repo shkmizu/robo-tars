@@ -10,6 +10,8 @@
 //   Uno A4 / A5 / 5V / GND      → PCA9685 SDA / SCL / VCC / GND (conector de pinos dobrados)
 //   Uno SDA / SCL (ao lado do AREF), 3.3V, GND → OLED SDA / SCK / VDD / GND
 //   Servo braço D → PCA9685 canal 0 | servo braço E → canal 1 (marrom na fileira preta, GND)
+//   SEM pilhas (só USB): Uno 5V → pino V+ do PCA9685 (energia dos servos) e Uno D5 → pino VCC do PCA9685
+//     (só o chip). Nunca use esse 5V → V+ junto com as pilhas.
 //   Pilhas (4 × AA, 6 V) → borne verde V+ / GND do PCA9685; do borne V+ um jumper ao Vin do Uno.
 //     (Nunca no pino 5V: 6 V queima o Uno.) Pelo Vin, o cabo USB pode ficar ligado junto.
 //   HC-05: +5V → 5V (ao lado do RES), GND → GND, TX → D10, RX ← D11 pelo divisor
@@ -291,6 +293,14 @@ void coreografia() {
 // completam o modelo: "presente" sem mexer nem 2 cm por OBSTACULO_MS é um objeto (passagem
 // obstruída), e eco que nunca responde é sensor com falha (fio solto).
 const uint8_t PINO_TRIG = 7, PINO_ECHO = 8;
+// VCC do PCA9685 no D5 (só o chip, ~10 mA): assim o pino 5V do Uno fica livre para o V+ do PCA9685,
+// que alimenta os servos pelo USB sem pilhas (jumper 5V → V+). O D5 sobe no começo do setup().
+// Se o VCC do PCA9685 estiver no 5V (e o D5 solto), nada muda: o D5 só fica em 5 V sem ligar a nada.
+#if USAR_PCA9685
+const int8_t PINO_VCC_PCA = 5;
+#else
+const int8_t PINO_VCC_PCA = -1;
+#endif
 // VCC do sensor no D6 (ao lado do D7): o 5V do Uno já alimenta o PCA9685 e alguns clones não têm
 // IOREF. O D6 fica em 5 V; o HC-SR04 gasta ~15 mA, abaixo dos 20 mA recomendados por pino. Bônus:
 // se o sensor travar (o eco de alguns clones fica preso), o robô o desliga e religa sozinho.
@@ -530,6 +540,11 @@ void lerComandos() {
 }
 
 void setup() {
+  if (PINO_VCC_PCA >= 0) {
+    pinMode(PINO_VCC_PCA, OUTPUT);
+    digitalWrite(PINO_VCC_PCA, HIGH);
+    delay(60);   // o PCA9685 precisa de um instante depois de receber energia
+  }
   Serial.begin(115200);
   Serial.println(F("TARS ligando..."));
 #if USAR_BLUETOOTH
