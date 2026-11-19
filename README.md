@@ -20,6 +20,25 @@
 >
 > **Vídeo de demonstração (até 6 min):** https://youtu.be/AXmjkm5v5kA
 
+## Onde está o projeto da GS (Project-Based Maker Lab)
+
+Este repositório guarda o robô TARS inteiro. **A evolução da GS está nos arquivos abaixo**; o resto é a base do robô, feita antes.
+
+| O que é | Onde está |
+|---|---|
+| **Documentação da GS**: problema, componentes, ligações, integração sensor + IA, contrato da API, falhas, instalação, testes | [`CITIZENTECH.md`](CITIZENTECH.md) |
+| **Firmware do Arduino**: leitura do sensor, classificador embarcado, obstáculo, falha do sensor, reações sem o computador | [`versao_final/arduino/tars_ia/`](versao_final/arduino/tars_ia/): `tars_ia.ino`, `presenca.h`, `modelo_presenca.h` |
+| **Modelo de IA do sensor**: treino, métricas e gravação de dados | [`versao_final/ia/presenca.py`](versao_final/ia/presenca.py), [`presenca_metricas.md`](versao_final/ia/presenca_metricas.md) |
+| **Totem de atendimento**: decide o atendimento pelo sensor, IA local, voz, registro e consulta por voz | [`versao_final/ia/totem.py`](versao_final/ia/totem.py), [`tars.py`](versao_final/ia/tars.py) |
+| **Integração com a API do BairroVivo**: autenticação, fila sem rede, reenvio | [`versao_final/ia/bairrovivo.py`](versao_final/ia/bairrovivo.py) e a API simulada [`api_simulada.py`](versao_final/ia/api_simulada.py) |
+| **Testes automáticos** (43) | [`versao_final/ia/testes/`](versao_final/ia/testes/) |
+| **Como instalar e rodar** (arquivos `.bat` de clique duplo para Windows) | [`CITIZENTECH.md`](CITIZENTECH.md#8-instalação-e-execução) e [`versao_final/README.md`](versao_final/README.md) |
+| **Sensor no projeto mecânico**: furos, verificação de encaixe e modelo 3D | [`fusion/RoboDoisBracos/projeto.py`](fusion/RoboDoisBracos/projeto.py), [`demo/robo_demo.html`](demo/robo_demo.html) |
+
+**Base do robô, anterior à GS** (não faz parte da evolução): `arduino/robo_bracos/` e `ia/` (versão de teste), `arduino/tinkercad/`, `laser/`, `fusion/`, [`MONTAGEM.md`](MONTAGEM.md), [`FUSION.md`](FUSION.md), [`CP5.md`](CP5.md) e [`APRESENTACAO.md`](APRESENTACAO.md) (apresentação da disciplina anterior).
+
+---
+
 
 Robô de mesa inspirado no TARS, de *Interestelar*. São 4 blocos de MDF lado a lado, como no filme: os 2 do meio formam o corpo e os 2 de fora são os braços, cada um movido por um micro servo. Uma tela OLED na frente mostra o que ele está pensando e falando.
 

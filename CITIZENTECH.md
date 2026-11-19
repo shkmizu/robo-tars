@@ -19,6 +19,8 @@ Evolução do robô TARS, feito antes na disciplina, para o **BairroVivo**, a pl
 
 **Vídeo de demonstração (até 6 min):** https://youtu.be/AXmjkm5v5kA
 
+**Onde está o código da GS:** veja o mapa de arquivos no [`README.md`](README.md#onde-está-o-projeto-da-gs-project-based-maker-lab).
+
 ---
 
 ## 1. Problema
