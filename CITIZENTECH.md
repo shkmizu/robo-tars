@@ -255,18 +255,7 @@ O firmware também foi compilado para o ATmega328P: 30.072 bytes (92% da flash) 
 
 As situações de falha (API fora do ar, objeto parado, fio do Echo solto e totem fechado) estão cobertas pelos testes automáticos descritos acima.
 
-## 11. Roteiro do vídeo (até 6 min)
-
-| Tempo | O quê |
-|---|---|
-| 0:00–0:40 | O problema: relatos dispersos e quem não usa aplicativo. O BairroVivo e o papel do totem |
-| 0:40–1:30 | O robô: o sensor na frente, as ligações, o modelo 3D com o cone de alcance |
-| 1:30–2:15 | Como a IA decide: as 3 camadas e o modelo treinado (mostrar a matriz de confusão) |
-| 2:15–4:00 | **Demonstração:** alguém passa (não é chamado) → alguém chega (saudação) → "tem um poste apagado na Rua…" → confirmação → protocolo → aparece no painel → "qual o status do protocolo 1?" |
-| 4:00–5:15 | **Falhas:** API fechada (fila e reenvio) · objeto na frente (obstrução registrada) · totem fechado (modo autônomo) |
-| 5:15–6:00 | Resultados, limitações e próximos passos |
-
-## 12. Segurança, privacidade e ética
+## 11. Segurança, privacidade e ética
 
 - O **microfone só liga com alguém na frente**. O áudio não é gravado nem enviado: só o texto reconhecido vai para a IA local, e só o relato vai para a API.
 - O totem **não pede nome, telefone, CPF nem e-mail**.
@@ -274,7 +263,7 @@ As situações de falha (API fora do ar, objeto parado, fio do Echo solto e tote
 - A chave do dispositivo fica fora do código e do Git. Na API, o dispositivo só cria leituras e ocorrências e consulta protocolos.
 - A IA **sugere**, um operador **decide** (`requer_revisao: true`). Nada é tratado como emergência automaticamente.
 
-## 13. Limitações
+## 12. Limitações
 
 - O modelo foi treinado com **dados sintéticos**; os dados reais entram com `presenca.py gravar`. A acurácia real só será conhecida depois da calibração no local.
 - O HC-SR04 tem um cone estreito (~15°): pessoas muito de lado não são vistas, e superfícies macias ou inclinadas refletem mal.
